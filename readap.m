@@ -10,7 +10,4 @@ timeWindow = [10 30]; % in seconds
 [data_partial, sampleIdx] = imec.readAP_timeWindow(timeWindow);
 
 data_time = sampleIdx / imec.fsAP;
-plot(data_time,data_partial(45,:))
-                        
-% Inspect the raw IMEC traces
-%imec.inspectAP_timeWindow([10 20]); % 10 20 seconds into the recording
+plot(data_time,data_partial(45,:));
