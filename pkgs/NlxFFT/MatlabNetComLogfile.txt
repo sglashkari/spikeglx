@@ -1,0 +1,49 @@
+NetCom Log File Opened - File Name:  MatlabNetComLogfile.txt
+Time Opened: (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36
+NetCom Version 2.1.1
+
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Attempting to initialize Message Client connection.  serverName: localhost, portNumber: 26200
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Attempting to create Client Socket
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Client Socket created successfully
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Attempting to request information about our connection.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Request for information was successful.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:36 - NetworkNodeClient::InitializeClient() - Attempting to establish a connection to our server.
+-* ERROR *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::ConnectToServer() - Error Connecting To Server, error code: WSAECONNREFUSED - The attempt to connect was forcefully rejected.
+-* ERROR *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Failed to connect to message server.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Attempting to initialize Message Client connection.  serverName: localhost, portNumber: 26100
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Attempting to create Client Socket
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Client Socket created successfully
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Attempting to request information about our connection.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Request for information was successful.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Attempting to establish a connection to our server.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Connection successfully established
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:37 - NetworkNodeClient::InitializeClient() - Message Client successfully initialized
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:39 - NodeConnectionClient::AddStreamObject() - Notice, Attempting to add object to our stream list, objectName: CSC1, mStreamType CSC.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:39 - NodeConnectionClient::AddStreamObject() - Notice, Attempt to add stream object to our list was successful.  objectName: CSC1, mStreamType CSC.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:39 - NodeConnectionClient::AddStreamObject() - Notice, Attempting to add object to our stream list, objectName: EVENTS, mStreamType Event.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:51:39 - NodeConnectionClient::AddStreamObject() - Notice, Attempt to add stream object to our list was successful.  objectName: EVENTS, mStreamType Event.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NetworkNodeClient::ShutdownClient() - Attempting to Shutdown Message Client
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Attempting to remove object from our stream list, objectName: CSC1, mStreamType CSC.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Stream Object count has been decremented.  count: 0, mStreamType CSC.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Stream Object count was zero, therefore object has been removed.  objectName: CSC1, mStreamType CSC.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Attempting to remove object from our stream list, objectName: Events, mStreamType Event.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Stream Object count has been decremented.  count: 0, mStreamType Event.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::RemoveStreamObject() - Notice, Stream Object count was zero, therefore object has been removed.  objectName: Events, mStreamType Event.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - mDmaProcessor thread has been terminated successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NodeConnectionClient::CloseServerStream() - WaitForSingleObject for mDmaProcessor thread completed successfully.
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NetworkNodeClient::ShutdownClient() - Attempting to Close Message Client Socket
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NetworkNodeClient::ShutdownClient() - Attempt to Close Message Client Socket was successful
+-* NOTICE *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NetworkNodeClient::ShutdownClient() - Attempting to Shutdown Message Client
+-* WARNING *- (mm/dd/yyyy): 08/08/2013 At Time: 14:54:54 - NetworkNodeClient::ShutdownClient() - Unable to Close Message Client, Client has not yet been initialized
+Log File Closed - End of File
+

@@ -1,0 +1,25 @@
+Not Connected - call NlxConnectToServer before calling this function.
+Connected to 127.0.0.1.
+PASSED set the application name
+PASSED open stream for all current objects
+10^-(150/20)
+
+ans =
+
+   3.1623e-08
+
+Error while evaluating TimerFcn for timer 'NlxFFTIntervalT' 
+
+Invalid or deleted object.
+
+
+Error while evaluating TimerFcn for timer 'NlxFFTIntervalT' 
+
+Invalid or deleted object.
+
+
+Error while evaluating TimerFcn for timer 'NlxFFTIntervalT' 
+
+Invalid or deleted object.
+
+

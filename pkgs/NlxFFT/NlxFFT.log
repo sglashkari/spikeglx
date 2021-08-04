@@ -1,0 +1,4 @@
+Not Connected - call NlxConnectToServer before calling this function.
+Connected to 127.0.0.1.
+PASSED set the application name
+PASSED open stream for all current objects
