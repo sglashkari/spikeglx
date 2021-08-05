@@ -1,4 +1,4 @@
-function [Time,Data,Header] = readcsc(ncs_filename, TimeRange)
+function [Time,Data,Header,ChannelNumbers,SampleFrequencies, NumberOfValidSamples,Timestamps,N] = readcsc(ncs_filename, TimeRange)
 if nargin == 0
      exp_directory = pwd;
      [datafile,exp_directory] = uigetfile(fullfile(exp_directory,'*.ncs'), 'Select ncs File');
