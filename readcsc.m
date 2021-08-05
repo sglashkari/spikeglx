@@ -27,17 +27,8 @@ else
         HeaderExtractionFlag, ExtractionMode, ExtractionModeVector);
 end
 
-InputFormat = 'yyyy/MM/dd HH:mm:ss';
-StartTimeString = extractAfter(Header{8},'-TimeCreated ');
-StartTime = datetime(StartTimeString,'InputFormat',InputFormat);
-FinishTimeString = extractAfter(Header{9},'-TimeClosed ');
-FinishTime = datetime(FinishTimeString,'InputFormat',InputFormat);
-
-SamplingFrequencyString = extractAfter(Header{15},'-SamplingFrequency ');
-SamplingFrequency = str2double(SamplingFrequencyString);
-
-ADBitVoltsString = extractAfter(Header{17},'-ADBitVolts ');
-ADBitVolts = str2double(ADBitVoltsString);
+SamplingFrequency = 30000;
+ADBitVolts = 0.000000036621093749999997;
 
 Data = Samples(:)*ADBitVolts; % volts
 N = size(Samples,2);

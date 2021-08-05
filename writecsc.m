@@ -27,7 +27,7 @@ FieldSelectionFlags = [1 1 1 1 1 1]; % Timestamps, Channel Numbers, Sample Frequ
 
 %   Timestamps: A 1xN integer vector of timestamps. This must be in ascending order.
 N = floor(length(time)/512);
-Timestamps = time(1:512:end) * 1e6; % microseconds
+Timestamps = time(1:512:512*N) * 1e6; % microseconds
 
 % Number Of Records In Matlab Arrays
 NumRecs = N;
