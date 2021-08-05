@@ -1,0 +1,3 @@
+[submodule "neuropixel-utils"]
+	path = neuropixel-utils
+	url = git@github.com:djoshea/neuropixel-utils.git
