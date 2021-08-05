@@ -1,7 +1,8 @@
 %% https://djoshea.github.io/neuropixel-utils/
 % Create an ImecDataset pointing at a specific
-channelMapFile = '/home/shahin/Pel/neuropixel-utils/map_files/neuropixPhase3A_kilosortChanMap.mat';
-imec = Neuropixel.ImecDataset('/home/shahin/Pel/07202021_1203_944_pedestal_g0_t0.exported.imec0.ap.bin', 'channelMap', channelMapFile);
+addpath('/home/shahin/spikeglx/neuropixel-utils/+Neuropixel');
+channelMapFile = '/home/shahin/spikeglx/neuropixel-utils/map_files/neuropixPhase3A_kilosortChanMap.mat';
+imec = Neuropixel.ImecDataset('/home/shahin/spikeglx/07202021_1203_944_pedestal_g0_t0.exported.imec0.ap.bin', 'channelMap', channelMapFile);
 
 meta = imec.readAPMeta();
 
