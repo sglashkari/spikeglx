@@ -1,4 +1,4 @@
-function [Time,Data,Header,ChannelNumbers,SampleFrequencies, NumberOfValidSamples,Timestamps,N] = readcsc(ncs_filename, TimeRange)
+function [Time,Data,Header,Samples] = readcsc(ncs_filename, TimeRange)
 if nargin == 0
      exp_directory = pwd;
      [datafile,exp_directory] = uigetfile(fullfile(exp_directory,'*.ncs'), 'Select ncs File');
@@ -21,7 +21,7 @@ if ispc
         Samples, Header] = Nlx2MatCSC(ncs_filename, FieldSelectionFlags,...
         HeaderExtractionFlag, ExtractionMode, ExtractionModeVector);
 else
-    addpath('pkgs/releaseDec2015/binaries'); % Neuralynx packages for Linux/Mac packages
+    addpath('pkgs/releaseDec2015/binaries'); % Neuralynx packages for Linux/Mac
     [Timestamps, ChannelNumbers, SampleFrequencies, NumberOfValidSamples,...
         Samples, Header] = Nlx2MatCSC_v3(ncs_filename, FieldSelectionFlags,...
         HeaderExtractionFlag, ExtractionMode, ExtractionModeVector);
@@ -40,9 +40,9 @@ ADBitVoltsString = extractAfter(Header{17},'-ADBitVolts ');
 ADBitVolts = str2double(ADBitVoltsString);
 
 Data = Samples(:)*ADBitVolts; % volts
-N = size(Samples);
-s = 1:N(1):N(1)*N(2); 
-sq = N(1)+1:1:N(1)*(N(2)+1); % tmp change
+N = size(Samples,2);
+s = 1:512:512*N; 
+sq = 1:1:512*N;
 
 Time = interp1(s,Timestamps,sq); % check accuracy of this method
 

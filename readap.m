@@ -7,8 +7,14 @@ imec = Neuropixel.ImecDataset('/home/shahin/spikeglx/07202021_1203_944_pedestal_
 meta = imec.readAPMeta();
 
 % Reading specific time window
-timeWindow = [10 30]; % in seconds
+timeWindow = [10 10.1]; % in seconds
 [data_partial, sampleIdx] = imec.readAP_timeWindow(timeWindow);
 
-data_time = sampleIdx / imec.fsAP;
-plot(data_time,data_partial(45,:));
+data_time = sampleIdx / imec.fsAP;  % in seconds
+plot(data_time,data_partial(46,:));
+grid on
+
+%%
+data = data_partial(46,:) * 1e-6; % microVolts
+size(data)
+writecsc('test.ncs', data_time, data, 0);
