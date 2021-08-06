@@ -34,12 +34,11 @@ data_bits = round(data(1:512*N) / 0.000000036621093749999997); % volts to bits
 Samples = reshape(data_bits,512,N);
 
 FieldSelection = [1 0 0 0 1 0];
-%Mat2NlxCSC( FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, FieldSelectionFlags, Timestamps, Samples);
 
-%Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, FieldSelectionFlags, Timestamps, Samples);
+system(['rm -f ' FileName]);
+
 Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, FieldSelectionFlags, Timestamps, Samples );
 
-%Mat2NlxCSC('test.ncs', 0, 1, 1, [1 0 0 0 1 0], Timestamps,ChannelNumbers, SampleFrequencies, NumberOfValidSamples,Samples, Header);
 
 figure(2)
 plot(time,data_bits)
@@ -67,10 +66,7 @@ Time = (Time * 1e-6)'; % seconds
 
 % [Time3,Data3,Header3,Samples3,Timestamps3,Data_bits3] = readcsc('test.ncs');
 figure(3)
-plot(Time, Samples(:))
-% hold on
-% plot(Time, Data)
+plot(Time, Data)
 
-figure(3)
-hold on
+figure(4)
 plot(Timestamps*1e-6, Samples(1,:),'sr')
