@@ -1,4 +1,6 @@
-function writecsc(ncs_filename, time, data, ChNo) 
+function [time,data,Header,Samples,Timestamps,data_bits,FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, ...
+                FieldSelectionFlags, ChannelNumbers, SampleFrequencies, ...
+                NumberOfValidSamples] = writecsc(ncs_filename, time, data, ChNo) 
 %WRITECSC 
 %
 %   data in Volts
@@ -24,10 +26,14 @@ AppendToFileFlag = 0; % Delete the file if exists
 ExportMode = 1; % Export All
 ExportModeVector = 1; % (Extract All): The vector value is ignored.
 FieldSelectionFlags = [1 1 1 1 1 1]; % Timestamps, Channel Numbers, Sample Frequency, Number of Valid Samples, Samples, Header
+%FieldSelectionFlags = [1 0 0 0 1 0];
+%      
 
 %   Timestamps: A 1xN integer vector of timestamps. This must be in ascending order.
 N = floor(length(time)/512);
-Timestamps = time(1:512:512*N) * 1e6; % microseconds
+time = time(1:512*N)';
+Timestamps = time(1:512:end) * 1e6; % microseconds
+size(Timestamps)
 
 % Number Of Records In Matlab Arrays
 NumRecs = N;
@@ -43,8 +49,9 @@ SampleFrequencies = 30000 * ones(1,N);
 NumberOfValidSamples = 512 * ones(1,N);
 
 %   Samples: A 512xN integer matrix of the data points. These values are in AD counts.
-data = round(data / 0.000000036621093749999997); % volts to bits
-Samples = reshape(data(1:512*N),512,N);
+data_bits = round(data(1:512*N) / 0.000000036621093749999997); % volts to bits
+Samples = reshape(data_bits,512,N);
+size(Samples)
 
 %   Header: A Mx1 string vector of all the text from the Neuralynx file header, where
 %           M is the number of lines of text in the header.
@@ -66,7 +73,6 @@ Header = {'######## This file has created from a spike GLX file';
         '-ADMaxValue 32767'                      ;                        
         '-ADBitVolts 0.000000036621093749999997'};
 
-    disp('hello')
 if ispc
     addpath('pkgs/MatlabImportExport_v6.0.0'); % Neuralynx packages for Windows
     Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, ...
@@ -76,7 +82,15 @@ else
     addpath('pkgs/releaseDec2015/binaries'); % Neuralynx packages for Linux/Mac
     Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, ...
                 FieldSelectionFlags, Timestamps, ChannelNumbers, SampleFrequencies, ...
-                NumberOfValidSamples, Samples, Header);            
+                NumberOfValidSamples, Samples, Header);
+    FieldSelection = [1 0 0 0 1 0];
+    Mat2NlxCSC( FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, ...
+                FieldSelection, Timestamps, Samples);
 end
+
+%         Function( Filename, AppendFile, ExtractMode, ModeArray, NumRecs, ...
+%       FieldSelection, Timestamps, ChannelNumbers, SampleFrequency, ...
+%       NumberValidSamples, Samples, Header );
+
 
 end

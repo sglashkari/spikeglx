@@ -55,7 +55,17 @@
 %                     Requirements
 %                         1. The Array must have 2 elements only.
 %                         2. The 2 elements must be in increasing order.
-%                     Example: We wish to extract the first 10 records from the file.
+%                     Example: We wish to extract the first 10 recordsField Selection Array - This denotes which fields to extract from matlab and write to file, any combination is possible.
+%                  Requirements
+%                  1. The Array must contain only 1's and 0's.  A 1 will extract the field, a 0 will not extract the field.
+%                  2. The Array must be of size NumFields.
+%                  Example:   We want to extract fields for Timestamps and Samples Only.
+%                      FieldSelection(1) = 1;
+%                      FieldSelection(2) = 0;
+%                      FieldSelection(3) = 0;
+%                      FieldSelection(4) = 0;
+%                      FieldSelection(5) = 1;
+%                      FieldSelection(6) = 0; from the file.
 %                         ModeArray(1) = 0;
 %                         ModeArray(2) = 9;
 %                  3. Extract Record Index List.

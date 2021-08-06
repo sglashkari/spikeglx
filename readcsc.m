@@ -1,4 +1,4 @@
-function [Time,Data,Header,Samples] = readcsc(ncs_filename, TimeRange)
+function [Time,Data,Header,Samples,Timestamps,Data_bits] = readcsc(ncs_filename, TimeRange)
 if nargin == 0
      exp_directory = pwd;
      [datafile,exp_directory] = uigetfile(fullfile(exp_directory,'*.ncs'), 'Select ncs File');
@@ -30,7 +30,9 @@ end
 SamplingFrequency = 30000;
 ADBitVolts = 0.000000036621093749999997;
 
-Data = Samples(:)*ADBitVolts; % volts
+Data_bits = Samples(:);
+
+Data = Data_bits*ADBitVolts; % volts
 N = size(Samples,2);
 s = 1:512:512*N; 
 sq = 1:1:512*N;
@@ -38,10 +40,13 @@ sq = 1:1:512*N;
 Time = interp1(s,Timestamps,sq); % check accuracy of this method
 
 Data(isnan(Time))=[];
+Data_bits(isnan(Time))=[];
 Time(isnan(Time))=[];
 
 Time = Timestamps(1) + (1:length(Data)) * 1e6 / SamplingFrequency; % micrseconds
 Time = (Time * 1e-6)'; % seconds
+
+Time(end)-Time(1)
 
 if nargout == 0
     plot(Time,Data);
