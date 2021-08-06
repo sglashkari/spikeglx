@@ -1,17 +1,36 @@
 clc; clear
 close all
+addpath([pwd filesep 'pkgs/releaseDec2015/binaries']); % Neuralynx packages for Linux/Mac
+addpath([pwd filesep 'neuropixel-utils']);
 %%
 [Time1,Data1,Header1,Samples1,Timestamps1,Data_bits1] = readcsc('CSC1.ncs',[1000 1100]*1e6);
-size_Time1 = size(Time1);
-size_Data1 = size(Data1);
-figure(1)
-plot(Time1,Data1)
+% figure(1)
+% plot(Time1,Data1)
 % figure(2)
 % plot(Timestamps1*1e-6, Samples1(1,:),'sr')
 
 %%
-time = Time1;
-data = Data1;
+
+channelMapFile = [pwd filesep 'neuropixel-utils/map_files/neuropixPhase3A_kilosortChanMap.mat'];
+imec = Neuropixel.ImecDataset([pwd filesep '07202021_1203_944_pedestal_g0_t0.exported.imec0.ap.bin'], 'channelMap', channelMapFile);
+
+meta = imec.readAPMeta();
+
+% Reading specific time window
+timeWindow = [10 30]; % in seconds
+[data_partial, sampleIdx] = imec.readAP_timeWindow(timeWindow);
+
+data_time = sampleIdx / imec.fsAP;  % in seconds
+figure(1);
+plot(data_time,data_partial(46,:));
+grid on
+
+%% Write to CSC
+time = data_time'; % in seconds
+data = double(data_partial(46,:))' * 1e-6; % microVolts to Volts
+
+% time = Time1;
+% data = Data1;
 
 FileName = 'test.ncs';
 AppendToFileFlag = 0; % Delete the file if exists
@@ -37,7 +56,7 @@ FieldSelection = [1 0 0 0 1 0];
 
 system(['rm -f ' FileName]);
 
-Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, FieldSelectionFlags, Timestamps, Samples );
+Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, FieldSelectionFlags, Timestamps, Samples);
 
 
 figure(2)
@@ -45,7 +64,7 @@ plot(time,data_bits)
 hold on
 plot(Timestamps*1e-6, Samples(1,:),'sr')
 
-%%
+%% Read From CSC
 FieldSelectionFlags = [1 0 0 0 1]; % Timestamps, ChannelNumbers, SampleFrequencies, NumberOfValidSamples, Samples
 HeaderExtractionFlag = 0;
 ExtractionMode = 1;
@@ -61,12 +80,17 @@ sq = 1:1:512*N;
 
 Time = interp1(s,Timestamps,sq); % check accuracy of this method
 
+Data(isnan(Time))=[];
+Time(isnan(Time))=[];
+
 %Time = Timestamps(1) + (1:length(Data)) * 1e6 / 30000; % micrseconds
 Time = (Time * 1e-6)'; % seconds
 
 % [Time3,Data3,Header3,Samples3,Timestamps3,Data_bits3] = readcsc('test.ncs');
 figure(3)
-plot(Time, Data)
+plot(Time, Data*1e6)
+ylabel('Voltage (µV)')
+xlabel('Time (sec)')
 
-figure(4)
-plot(Timestamps*1e-6, Samples(1,:),'sr')
+% figure(4)
+% plot(Timestamps*1e-6, Samples(1,:),'sr')
