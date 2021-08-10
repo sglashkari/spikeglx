@@ -1,14 +1,9 @@
 clc; clear
 close all
+tic
 addpath([pwd filesep 'pkgs/releaseDec2015/binaries']); % Neuralynx packages for Linux/Mac
 addpath([pwd filesep 'neuropixel-utils']);
 addpath([pwd filesep 'neuropixel-utils/map_files']);
-%%
-%[Time1,Data1,Header1,Samples1,Timestamps1,Data_bits1] = readcsc('CSC1.ncs',[1000 1100]*1e6);
-% figure(1)
-% plot(Time1,Data1)
-% figure(2)
-% plot(Timestamps1*1e-6, Samples1(1,:),'sr')
 
 %%
 
@@ -17,22 +12,34 @@ channelMapFile = [pwd filesep 'neuropixel-utils/map_files/neuropixPhase3A_kiloso
 filename = '07192021_1850_944_sleep2_g0_t0.imec0.ap.bin';
 
 imec = Neuropixel.ImecDataset(filename, 'channelMap', channelMapFile);
-
 meta = imec.readAPMeta();
 
 % Reading specific time window
 timeWindow = [0 meta.fileTimeSecs]; % in seconds
-[data_partial, sampleIdx] = imec.readAP_timeWindow(timeWindow);
-
+[data_all, sampleIdx] = imec.readAP_timeWindow(timeWindow);
 data_time = sampleIdx / imec.fsAP;  % in seconds
+
+
 figure(1);
-plot(data_time,data_partial(46,:));
+plot(data_time,data_all(46,:));
 grid on
 
+%% filter the CSC channel between 600 Hz and 6000 Hz
+
+range = [43:74 133:164 168:183]+1;
+toc
+data_filtered = data_all;
+for i=range
+    data_filtered(i,:) = filterlfp(data_time, data_all(i,:), 600, 6000); 
+end
+
 %% Write to CSC
-for i = 1:meta.nSavedChans
+toc
+m = 0;
+M = 0;
+for i = range %1:meta.nSavedChans
     time = data_time'; % in seconds
-    data = double(data_partial(i,:))' * 1e-6; % microVolts to Volts
+    data = -double(data_filtered(i,:))' * 1e-6; % microVolts to Volts INVERTED
     
     % time = Time1;
     % data = Data1;
@@ -62,9 +69,12 @@ for i = 1:meta.nSavedChans
     system(['rm -f ' FileName]);
     
     Mat2NlxCSC(FileName, AppendToFileFlag, ExportMode, ExportModeVector, NumRecs, FieldSelectionFlags, Timestamps, Samples);
+    m = min(min(data_bits),m);
+    M = max(max(data_bits),M);
     
 end
 
+toc
 figure(2)
 plot(time,data_bits)
 hold on
@@ -98,5 +108,6 @@ plot(Time, Data*1e6)
 ylabel('Voltage (µV)')
 xlabel('Time (sec)')
 
-% figure(4)
-% plot(Timestamps*1e-6, Samples(1,:),'sr')
+system(['zip All_CSCs_Inverted.zip CSC*.ncs']);
+%system("rsync -tvrPh *d.zip '/run/user/1001/gvfs/smb-share:server=10.163.99.67,share=public/forShahin/'")
+toc
