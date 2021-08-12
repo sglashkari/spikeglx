@@ -46,7 +46,7 @@ Time(isnan(Time))=[];
 Time = Timestamps(1) + (1:length(Data)) * 1e6 / SamplingFrequency; % micrseconds
 Time = (Time * 1e-6)'; % seconds
 
-Time(end)-Time(1)
+Time(end)-Time(1);
 
 if nargout == 0
     plot(Time,Data);
