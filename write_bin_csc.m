@@ -11,6 +11,20 @@ if nargin < 4
     fclose(dummy);
 end
 
+%% Read header values
+ADBitVoltsString = extractAfter(header{17},'-ADBitVolts ');
+ADBitVolts = str2double(ADBitVoltsString);
+
+%% Extract data
+
+%   Timestamps: A 1xN integer vector of timestamps. This must be in ascending order.
+N = floor(length(time)/512);
+time = time(1:512*N)';
+TimeStamp = time(1:512:end) * 1e6; % microseconds
+
+%   Samples: A 512xN integer matrix of the data points. These values are in AD counts.
+data_bits = round(data(1:512*N) / ADBitVolts); % volts to bits
+Samples = reshape(data_bits,512,N);
 
 %% Write Header of CSC (size M x 1)
 headerSize = 16*1024; % 16 kb
@@ -32,38 +46,5 @@ for i=1:N
     fwrite(fid, Samples(1:512,i), 'int16');
 end
 fclose(fid);
-
-% %% Read header values
-% InputFormat = 'yyyy/MM/dd HH:mm:ss';
-% StartTimeString = extractAfter(header{8},'-TimeCreated ');
-% StartTime = datetime(StartTimeString,'InputFormat',InputFormat);
-% FinishTimeString = extractAfter(header{9},'-TimeClosed ');
-% FinishTime = datetime(FinishTimeString,'InputFormat',InputFormat);
-% 
-% SamplingFrequencyString = extractAfter(header{15},'-SamplingFrequency ');
-% SamplingFrequency = str2double(SamplingFrequencyString);
-% 
-% ADBitVoltsString = extractAfter(header{17},'-ADBitVolts ');
-% ADBitVolts = str2double(ADBitVoltsString);
-
-% %% Extract data
-% data = Samples(:)* ADBitVolts; % volts
-% N = size(Samples,2);
-% s = 1:512:512*N; 
-% sq = 1:1:512*N;
-% 
-% time = interp1(s,TimeStamp,sq); % check accuracy of this method
-% data(isnan(time))=[];
-% time(isnan(time))=[];
-% time = (time * 1e-6)'; % second
-% 
-% %% Plot is no output is required
-% if nargout == 0
-%     plot(time,data);
-%     fprintf('Size of data is %d.\n',length(data));
-%     xlabel('Time (sec)')
-%     ylabel('Voltage (V)')
-%     clear time;
-% end
 
 end
