@@ -1,11 +1,11 @@
-function [time,data,header,Samples,TimeStamp,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc(filename)
+function [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc(filename)
 %% This file is written by Shahin G. Lashkari to read  Neuralynx CSC file (*.ncs)
 % as binary file
-clear time data header Samples TimeStamp ChannelNumber SampleFreq NumValidSamples
+clear time data header ChannelNumber SampleFreq NumValidSamples
 if nargin == 0
-     exp_directory = pwd;
-     [datafile,exp_directory] = uigetfile(fullfile(exp_directory,'CSC1.ncs'), 'Select ncs File');
-     filename = fullfile(exp_directory, datafile);
+    exp_directory = pwd;
+    [datafile,exp_directory] = uigetfile(fullfile(exp_directory,'CSC1.ncs'), 'Select ncs File');
+    filename = fullfile(exp_directory, datafile);
 end
 
 %% Read Header of CSC
@@ -15,7 +15,7 @@ chr = fread(fid, [1 headerSize], '*char');
 header = splitlines(chr);
 
 %% Read Body of CSC
-position = ftell(fid)
+% position = ftell(fid)
 i = 1;
 while ~feof(fid)
     try
@@ -37,15 +37,6 @@ end
 fclose(fid);
 
 %% Read header values
-InputFormat = 'yyyy/MM/dd HH:mm:ss';
-StartTimeString = extractAfter(header{8},'-TimeCreated ');
-StartTime = datetime(StartTimeString,'InputFormat',InputFormat);
-FinishTimeString = extractAfter(header{9},'-TimeClosed ');
-FinishTime = datetime(FinishTimeString,'InputFormat',InputFormat);
-
-SamplingFrequencyString = extractAfter(header{15},'-SamplingFrequency ');
-SamplingFrequency = str2double(SamplingFrequencyString);
-
 ADBitVoltsString = extractAfter(header{17},'-ADBitVolts ');
 ADBitVolts = str2double(ADBitVoltsString);
 
@@ -69,13 +60,11 @@ if exist('Samples','var')
         clear time;
     end
 else
+    warning('There was an error reading the file!');
     time=[];
     data=[];
-    Samples=[];
-    TimeStamp=[];
     ChannelNumber=[];
     SampleFreq=[];
     NumValidSamples=[];
 end
-
 end

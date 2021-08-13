@@ -5,7 +5,6 @@
 
 clc; clear
 close all
-tic
 range = [43:74 133:164 168:183]+1;
 
 %%
@@ -15,13 +14,19 @@ if isa(binaryFile,'double')
 elseif isa(binaryFile,'char')
     binaryFile = {binaryFile};
 end
-
+selpath = uigetdir(pwd,'Select Destination Folder');
+if isa(selpath,'double')
+    return;
+end
+tic
 for k = 1:length(binaryFile)
     meta = ReadMeta(binaryFile{k}, path);
     nChan = str2double(meta.nSavedChans); % 385
     nSamp = str2double(meta.fileSizeBytes) / (2 * nChan);
     n = floor(nSamp/512);
     dt = 1/str2double(meta.imSampRate); % in seconds
+    tStart{k} = posixtime(datetime(strrep(meta.fileCreateTime,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York'));
+
     %time = 0:dt:meta.fileTimeSecs;
     
     % opening
@@ -31,12 +36,12 @@ for k = 1:length(binaryFile)
         cscFile = cell(nChan,1); % 385 x 1
         for j=range
             FileName = ['CSC' num2str(j-1) '.ncs'];
-            cscFile{j} = fopen(FileName,'w');
+            cscFile{j} = fopen(FileName,'wb');
         end
         
         % Header
         headerSize = 16*1024; % 16 kb
-        dummy = fopen('header.txt','r');
+        dummy = fopen('header.txt','rb');
         hdr = fread(dummy, [1 headerSize], '*char');
         fclose(dummy);
         for j=range
@@ -47,8 +52,9 @@ for k = 1:length(binaryFile)
     
     % Body
     for i=1:n-1
-        Samples = fread(binFile, [nChan, 512], 'int16')'; % 512 x 385
-        TimeStamp = (dt + (i-1)*512*dt)*1e6; % in microseconds
+        data = fread(binFile, [nChan, 512], 'int16=>double')'; % 512 x 385
+        Samples = -round(data*32767 / 512); % microvolts to bits INVERTED
+        TimeStamp = (tStart{k} - tStart{1} + dt + (i-1)*512*dt)*1e6; % in microseconds
         SampleFreq=str2double(meta.imSampRate);
         NumValidSamples=512;
         for j=range
@@ -59,7 +65,7 @@ for k = 1:length(binaryFile)
             fwrite(cscFile{j}, SampleFreq, 'uint32');
             fwrite(cscFile{j}, NumValidSamples, 'uint32');
             % 512 x N
-            fwrite(cscFile{j}, Samples(1:512,j), 'int16');
+            fwrite(cscFile{j}, Samples(:,j), 'int16');
         end
     end
     fclose(binFile);
@@ -69,13 +75,36 @@ for j=range
     fclose(cscFile{j});
 end
 
-
 toc
-
+%%
 j=46;
-[time,data,header,Samples,TimeStamp,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc(['CSC' num2str(j-1) '.ncs']);
+[time,data] = read_bin_csc(['CSC' num2str(j-1) '.ncs']);
 
-figure;
-plot(time,data);
+figure(1);
+plot(time,data*1e6);
 xlabel('Time (sec)')
-ylabel('Voltage (V)')
+ylabel('Voltage (µV)')
+
+%%
+disp('filtering started')
+for j=range
+    [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc(['CSC' num2str(j-1) '.ncs']);
+    data_filtered = filterlfp(time, data, 600, 6000);
+    write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
+    fprintf('Filtering: %.0f seconds, %.0f%% done!\n',toc, find(range==j)/length(range)*100)
+end
+toc
+%%
+j=46;
+[time,data] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
+
+figure(2);
+plot(time,data*1e6);
+xlabel('Time (sec)')
+ylabel('Voltage (µV)')
+
+%% Zipping
+system(['zip ' selpath filesep 'All_CSCs_filtered_concatenated_Inverted.zip ' selpath filesep 'CSC*.ncs']);
+toc
+system(['rsync -tvrPh ' selpath filesep 'All_CSCs_filtered_concatenated_Inverted.zip "/run/user/1001/gvfs/smb-share:server=10.163.99.67,share=public/forShahin/"'])
+toc

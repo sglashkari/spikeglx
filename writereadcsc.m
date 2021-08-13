@@ -22,7 +22,8 @@ data_time = sampleIdx / imec.fsAP;  % in seconds
 
 figure(1);
 plot(data_time,data_all(46,:));
-grid on
+ylabel('Voltage (µV)')
+xlabel('Time (sec)')
 
 %% filter the CSC channel between 600 Hz and 6000 Hz
 
@@ -37,7 +38,7 @@ end
 toc
 m = 0;
 M = 0;
-for i = range %1:meta.nSavedChans
+for i = 46 % range %1:meta.nSavedChans
     time = data_time'; % in seconds
     data = -double(data_filtered(i,:))' * 1e-6; % microVolts to Volts INVERTED
     
@@ -108,6 +109,6 @@ plot(Time, Data*1e6)
 ylabel('Voltage (µV)')
 xlabel('Time (sec)')
 
-system(['zip All_CSCs_Inverted.zip CSC*.ncs']);
+%system('zip All_CSCs_Inverted.zip CSC*.ncs');
 %system("rsync -tvrPh *d.zip '/run/user/1001/gvfs/smb-share:server=10.163.99.67,share=public/forShahin/'")
 toc
