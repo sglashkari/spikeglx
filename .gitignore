@@ -41,3 +41,6 @@ octave-workspace
 
 # CSV file
 *.csv
+
+# Pos.p files
+[Pp]os.p*
