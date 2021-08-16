@@ -8,13 +8,16 @@ clc; close all
 pixels_width = 640;
 pixels_height = 480;
 frame_rate = 30; % 30 fps
-offset = 0;
+offset = 7.121804; % in sec
 %% Read data from file
 [csvFile,path] = uigetfile('*.csv','Select CSV File to Open');
 if isa(csvFile,'double')
     return;
 end
-
+[binaryFile,path] = uigetfile('*.ap.bin', 'Select a Binary Files','MultiSelect','on');
+if isa(binaryFile,'double')
+    return;
+end
 csvFile = fullfile(path, csvFile);
 A = readmatrix(csvFile,'Range','A:O');
 
@@ -29,7 +32,8 @@ hd = A(position_flag,14);
 angle = filterhd(hd);
 
 %% Calculations
-ts = t * 1e6 + offset; % in microseconds
+ts = (t + offset) * 1e6 ; % in microseconds
+ts = A(position_flag,15)* 1e6; % in microseconds
 
 box_x = [min(x) max(x)];
 box_y = [min(y) max(y)];
@@ -52,9 +56,11 @@ figure; plot(t,angle,'.b');
 xlabel('Time (sec)'); ylabel('Head direction (deg)')
 
 %% Writing header of the files
-start_time = '';
+meta = ReadMeta(binaryFile, path);
+start_time = datetime(strrep(meta.fileCreateTime,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York');
+
 header = {"%%BEGINHEADER";...
-       "%Stadium-style rig for jumping rats: Created from 2D head tracking data";...
+       "%Tracking data from DeepLabCut:";...
        strcat("%Date of the Experiment: ",datestr(start_time,"mmmm dd, yyyy"));...
        strcat("%Time of the Experiment: ",datestr(start_time,"HH:MM AM"));...
        "%File Type: Binary";...
@@ -100,10 +106,10 @@ end
 
 %% Writing data to the file in binary and ascii format
 positions = [ts, pos_x, pos_y, angle];
-format_spec_ascii = '%.2f, %.4f, %.4f, %.4f\r\n';
+format_spec_ascii = '%.0f, %.4f, %.4f, %.4f\r\n';
 
 for row = 1:size(positions,1)
-    fwrite(file,ts(row),'float64');
+    fwrite(file,ts(row),'uint64');
     fwrite(file,positions(row,2:4),'float32');
     fprintf(file_ascii,format_spec_ascii,positions(row,:));
 end
