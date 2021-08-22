@@ -6,7 +6,7 @@ csv2posp reads DeepLabCut CSV files (with time and head direction) and generates
 
 Attention:
 
-csv file should have this order:
+DLC's CSV file should have these columns:
 
 position x: 2nd column | position y: 3rd column | likelihood: 4th column | time: 14th column | head direction: 15th column
 
