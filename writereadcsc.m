@@ -9,7 +9,7 @@ addpath([pwd filesep 'neuropixel-utils/map_files']);
 
 channelMapFile = [pwd filesep 'neuropixel-utils/map_files/neuropixPhase3A_kilosortChanMap.mat'];
 
-filename = '07192021_1850_944_sleep2_g0_t0.imec0.ap.bin';
+filename = '07192021_1850_944_sleep3_g0_t0.imec0.ap.bin';
 
 imec = Neuropixel.ImecDataset(filename, 'channelMap', channelMapFile);
 meta = imec.readAPMeta();

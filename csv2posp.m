@@ -1,4 +1,4 @@
-%pos_p_gen generates Pos.p from a given tracking data
+%% pos_p_gen generates Pos.p from a given tracking data
 % *.csv ==> pos.p & pos.p.ascii
 % August 13, 2021
 % Author Shahin G Lashkari
@@ -7,33 +7,36 @@ clc; close all
 
 pixels_width = 640;
 pixels_height = 480;
-frame_rate = 30; % 30 fps
-offset = 7.121804; % in sec
 %% Read data from file
-[csvFile,path] = uigetfile('*.csv','Select CSV File to Open');
-if isa(csvFile,'double')
-    return;
-end
-[binaryFile,path] = uigetfile('*.ap.bin', 'Select a Binary Files','MultiSelect','on');
+[binaryFile,path] = uigetfile('*.ap.bin', 'Neuropixel Data: Select a Binary Files','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
 end
-csvFile = fullfile(path, csvFile);
+
+[csvFile,csvPath] = uigetfile('*.csv','Tracking Data: Select a CSV File to Open');
+if isa(csvFile,'double')
+    return;
+end
+
+selpath = uigetdir(pwd,'Select a Directory for Saving Pos.p File');
+if isa(selpath,'double')
+    return;
+end
+
+csvFile = fullfile(csvPath, csvFile);
 A = readmatrix(csvFile,'Range','A:O');
 
 p = A(:,4);
 position_flag = p>0.95;
 
-t = A(position_flag,1)/frame_rate; % in seconds
 x = A(position_flag,2);
 y = A(position_flag,3);
 
-hd = A(position_flag,14);
+hd = A(position_flag,15);
 angle = filterhd(hd);
 
 %% Calculations
-ts = (t + offset) * 1e6 ; % in microseconds
-ts = A(position_flag,15)* 1e6; % in microseconds
+ts = A(position_flag,14)* 1e6; % in microseconds
 
 box_x = [min(x) max(x)];
 box_y = [min(y) max(y)];
@@ -50,9 +53,9 @@ pos_y = (y- box_center(2)) * scale + pixels_height/2;
 figure; plot(pos_x, pixels_height - pos_y,'.')
 axis equal; axis([0 pixels_width 0 pixels_height])
 
-figure; plot(t,pos_x,'.b'); 
+figure; plot(ts*1e-6,pos_x,'.b'); 
 xlabel('Time (sec)'); ylabel('X position');ylim([0 pixels_width])
-figure; plot(t,angle,'.b'); 
+figure; plot(ts*1e-6,angle,'.b'); 
 xlabel('Time (sec)'); ylabel('Head direction (deg)')
 
 %% Writing header of the files
@@ -84,8 +87,8 @@ header = {"%%BEGINHEADER";...
        "%End Type";...
        "%%ENDHEADER"};
 
-pos_p_file_name = fullfile(path,'Pos.p');
-pos_p_ascii_file_name = fullfile(path,'Pos.p.ascii');
+pos_p_file_name = fullfile(selpath,'Pos.p');
+pos_p_ascii_file_name = fullfile(selpath,'Pos.p.ascii');
 
 if isfile(pos_p_file_name)
     answer=questdlg('The Pos.p file already exists! Do you want to overwrite it?', 'Warning!', 'Yes', 'No', 'Yes');
@@ -109,7 +112,7 @@ positions = [ts, pos_x, pos_y, angle];
 format_spec_ascii = '%.0f, %.4f, %.4f, %.4f\r\n';
 
 for row = 1:size(positions,1)
-    fwrite(file,ts(row),'uint64');
+    fwrite(file,ts(row),'float64');
     fwrite(file,positions(row,2:4),'float32');
     fprintf(file_ascii,format_spec_ascii,positions(row,:));
 end
