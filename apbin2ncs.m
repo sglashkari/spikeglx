@@ -26,7 +26,7 @@ if isa(csvFile,'double')
     end
 else
     csvFile = fullfile(csvPath, csvFile);
-    range = readmatrix(csvFile);
+    range = readmatrix(csvFile) + 1; % selection range in matlab is ..385, while for the range for AP is 0..384
 end
 
 selpath = uigetdir(pwd,'Select a Directory for Saving CSC Files');
@@ -34,7 +34,8 @@ if isa(selpath,'double')
     return;
 end
 
-%% Read Bin files are write to 
+%% Read AP binary files and write them into csc files
+disp('Reading and writing started ...')
 start = tic;
 for k = 1:length(binaryFile)
     meta = ReadMeta(binaryFile{k}, path);
@@ -64,7 +65,7 @@ for k = 1:length(binaryFile)
         for j=range
             fwrite(cscFile{j}, hdr, 'char'); % Write Header of CSCs
         end
-        toc(start)
+        disp('Headers written to the files ...')
     end
     
     % Body
@@ -84,6 +85,9 @@ for k = 1:length(binaryFile)
             % 512 x N
             fwrite(cscFile{j}, Samples(:,j), 'int16');
         end
+        if mod(i,5*round(n/100))==0 % display progress every 5 percent
+            fprintf('Read/Write: %.0f seconds, %.0f%% done.\n',toc(start), i/(n-1)*100)
+        end
     end
     fclose(binFile);
 end
@@ -91,7 +95,7 @@ end
 for j=range
     fclose(cscFile{j});
 end
-fprintf(['It took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'to read and write files.']);
+fprintf(['It took ' datestr(seconds(toc(start)),'HH:MM:SS') ,' to read and write files.\n\n']);
 
 %% Bandpass filter 600 - 6000
 disp('Filtering started ...')
@@ -100,10 +104,11 @@ for j=range
     [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
     data_filtered = filterlfp(time, data, 600, 6000);
     write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-    fprintf('Filtering: %.0f seconds, %.0f%% done!\n',toc(start2), find(range==j)/length(range)*100)
+    fprintf('Filtering: %.0f seconds, %.0f%% done.\n',toc(start2), find(range==j)/length(range)*100)
 end
-fprintf(['It took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,'to filter ', num2str(length(range)), ' csc files.']);
+fprintf(['It took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
 
 %% Zipping
+disp('Compression started ...')
 system(['cd ' selpath '; zip All_CSCs.zip CSC*.ncs; cd ' pwd]);
-fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.']);
+fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n\n']);
