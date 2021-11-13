@@ -1,13 +1,19 @@
 %% apbin2ncs reads a Spike GLX AP bin files to Neuralynx CSC files
+% It also remvoes the DC offset, does common average referencing (CAR) and
+% bandpass filtering (600-6000 Hz).
+%
 % *.ap.bin ==> *.ncs
 % This program is written by Shahin G Lashkari
-% 2021-08-11
-
+% Last upgrade: 2021-11-13
+%
+% Check:
+% https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#output-file-format-and-tools
+%
 clc; clear
 close all
 
 %% Read data from files
-[binaryFile,path] = uigetfile('*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
+[binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
 elseif isa(binaryFile,'char')
@@ -21,30 +27,36 @@ if isa(csvFile,'double')
         disp('No channel is selected!')
         return
     else
-        range = 1:385;
-        disp('All 385 channels are selected.')
+        range = 1:32;
+        disp('First 32 channels are selected.')
     end
 else
     csvFile = fullfile(csvPath, csvFile);
-    range = readmatrix(csvFile) + 1; % selection range in matlab is ..385, while for the range for AP is 0..384
+    range = readmatrix(csvFile) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
 end
 
-selpath = uigetdir(pwd,'Select a Directory for Saving CSC Files');
+selpath = uigetdir('D:\Analysis','Select a Directory for Saving CSC Files');
 if isa(selpath,'double')
     return;
 end
 
 %% Read AP binary files and write them into csc files
+chunksize = 300; % almost 5 seconds: 5 sec x 30Khz / 512 sample
+peak2peak = 12.5*1e-3; % 12.5 mV for NP 2.0
+bits = 14; % 14-bit for NP 2.0
+Nlx_ADBitVolts = 0.000000036621093749999997;
+voltperbit = peak2peak/2^bits/Nlx_ADBitVolts;
+
 disp('Reading and writing started ...')
 start = tic;
 for k = 1:length(binaryFile)
     meta = ReadMeta(binaryFile{k}, path);
     nChan = str2double(meta.nSavedChans); % 385
     nSamp = str2double(meta.fileSizeBytes) / (2 * nChan);
-    n = floor(nSamp/512);
+    n = floor(nSamp/512/chunksize);
     dt = 1/str2double(meta.imSampRate); % in seconds
     tStart{k} = posixtime(datetime(strrep(meta.fileCreateTime,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York'));
-
+    
     %time = 0:dt:meta.fileTimeSecs;
     
     % opening
@@ -70,20 +82,26 @@ for k = 1:length(binaryFile)
     
     % Body
     for i=1:n-1
-        data = fread(binFile, [nChan, 512], 'int16=>double')'; % 512 x 385
-        Samples = -round(data*32767 / 512); % microvolts to bits INVERTED
-        TimeStamp = (tStart{k} - tStart{1} + dt + (i-1)*512*dt)*1e6; % in microseconds
+        Samples = fread(binFile, [nChan, 512*chunksize], 'int16=>double')'; % (512xchunksize) x 385
+        Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset
+        Samples(:,range) = Samples(:,range) - mean(Samples(:,range),2); % CAR
+        Samples = -voltperbit * Samples; % microvolts to bits INVERTED
+        
+        TimeStamp = (tStart{k} - tStart{1} + (i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt )*1e6; % in microseconds
         SampleFreq=str2double(meta.imSampRate);
         NumValidSamples=512;
+        
+        % Write Body of CSCs
         for j=range
             ChannelNumber=j-1;
-            % Write Body of CSCs
-            fwrite(cscFile{j}, TimeStamp, 'uint64');
-            fwrite(cscFile{j}, ChannelNumber, 'uint32');
-            fwrite(cscFile{j}, SampleFreq, 'uint32');
-            fwrite(cscFile{j}, NumValidSamples, 'uint32');
-            % 512 x N
-            fwrite(cscFile{j}, Samples(:,j), 'int16');
+            for l = 1:chunksize
+                fwrite(cscFile{j}, TimeStamp(l), 'uint64');
+                fwrite(cscFile{j}, ChannelNumber, 'uint32');
+                fwrite(cscFile{j}, SampleFreq, 'uint32');
+                fwrite(cscFile{j}, NumValidSamples, 'uint32');
+                % 512 x N
+                fwrite(cscFile{j}, Samples((l-1)*512+1:l*512,j), 'int16');
+            end
         end
         if mod(i,5*round(n/100))==0 % display progress every 5 percent
             fprintf('Read/Write: %.0f seconds, %.0f%% done.\n',toc(start), i/(n-1)*100)
@@ -107,8 +125,29 @@ for j=range
     fprintf('Filtering: %.0f seconds, %.0f%% done.\n',toc(start2), find(range==j)/length(range)*100)
 end
 fprintf(['It took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
-
+%% Prep for Vyash's Analysis
+mkdir([selpath filesep 'B']);
+ncsFiles = dir([selpath filesep '*.ncs']);
+i = 0;
+for j=range
+    i = i+1;
+    copyfile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpath filesep 'B' filesep 'CSC_B' num2str(i) '.ncs']);
+end
+copyfile('VideoReport', [selpath filesep 'B' filesep 'VideoReport']);
+copyfile('VideoSampling', [selpath filesep 'B' filesep 'VideoSampling']);
+%% Vyash's Analysis
+beep;
+Vyashpath = uigetdir('C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms','Select Vyash''s Code Directory');
+if isa(Vyashpath,'double')
+    return;
+end
+cd(Vyashpath)
+start2= tic;
+system(['ParmsGenerationPipeline.bat "' selpath filesep 'B']);
+fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to create the parms file.\n']);
+beep;
 %% Zipping
-disp('Compression started ...')
-system(['cd ' selpath '; zip All_CSCs.zip CSC*.ncs; cd ' pwd]);
-fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n\n']);
+% disp('Compression started ...')
+% system(['cd ' selpath '; zip All_CSCs.zip CSC*.ncs; cd ' pwd]);
+%fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n\n']);
+%beep;
