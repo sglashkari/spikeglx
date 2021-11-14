@@ -41,9 +41,19 @@ if isa(selpath,'double')
 end
 
 %% Read AP binary files and write them into csc files
+answer=questdlg('Do you use Neuropixels 1.0 or 2.0?', 'Warning!', 'NP 1.0', 'NP 2.0', 'NP 2.0');
+if isequal(answer,'NP 1.0')
+    disp('Neuropixels 1.0 is selected!')
+    NP = 1;
+    peak2peak = 5*1e-3; % 5 mV for NP 1.0
+    bits = 10; % 10-bit for NP 1.0
+else
+    disp('Neuropixels 2.0 is selected!')
+    NP = 2;
+    peak2peak = 12.5*1e-3; % 12.5 mV for NP 2.0
+    bits = 14; % 14-bit for NP 2.0
+end
 chunksize = 300; % almost 5 seconds: 5 sec x 30Khz / 512 sample
-peak2peak = 12.5*1e-3; % 12.5 mV for NP 2.0
-bits = 14; % 14-bit for NP 2.0
 Nlx_ADBitVolts = 0.000000036621093749999997;
 voltperbit = peak2peak/2^bits/Nlx_ADBitVolts;
 
