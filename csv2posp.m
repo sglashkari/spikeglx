@@ -26,18 +26,15 @@ end
 csvFile = fullfile(csvPath, csvFile);
 A = readmatrix(csvFile,'Range','A:O');
 
-p = A(:,4);
-position_flag = p>0.95;
-
-x = A(position_flag,2);
-y = A(position_flag,3);
-
-hd = A(position_flag,15);
-angle = filterhd(hd);
+%% temp adjustment: 2021-11-19
+x = A(:,4);
+position_flag = x>=0;
+x = A(position_flag,4);
+y = A(position_flag,5);
+angle = -99*ones(length(x),1);
+ts = A(position_flag,3)* 1e6; % in microseconds
 
 %% Calculations
-ts = A(position_flag,14)* 1e6; % in microseconds
-
 box_x = [min(x) max(x)];
 box_y = [min(y) max(y)];
 

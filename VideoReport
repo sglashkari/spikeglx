@@ -1,0 +1,33 @@
+30 Hz tracking selected
+Red + Blue diodes used for head position
+Red, Blue, and Green diodes used for head direction
+Timestamp correction for new DT3120 drivers was performed
+
+Video Frame Report for Output to Pos.p:
+Video frame timestamp offset: 21000
+MinIFI: 29641   TS: 19971880855  Record: 325
+MaxIFI: 37666   TS: 19987467176  Record: 792
+
+< 0:	0
+5000: 	0
+10000: 	0
+15000: 	0
+20000: 	0
+25000: 	0
+30000: 	6
+35000: 	4183
+40000: 	400
+45000: 	0
+50000: 	0
+55000: 	0
+60000: 	0
+65000: 	0
+70000: 	0
+75000: 	0
+80000: 	0
+85000: 	0
+90000: 	0
+95000: 	0
+> 95000:	0
+
+

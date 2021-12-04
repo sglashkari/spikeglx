@@ -19,9 +19,17 @@
 %
 function [meta] = ReadMeta(binName, path)
 
+if nargin == 0
+     [metaName,path] = uigetfile(fullfile(pwd,'*.meta'), 'Select the meta File');
+else
     % Create the matching metafile name
     [dumPath,name,dumExt] = fileparts(binName);
     metaName = strcat(name, '.meta');
+end
+
+if isa(metaName,'double')
+    return;
+end
 
     % Parse ini file into cell entries C{1}{i} = C{2}{i}
     fid = fopen(fullfile(path, metaName), 'r');

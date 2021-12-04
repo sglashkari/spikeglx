@@ -20,7 +20,7 @@ elseif isa(binaryFile,'char')
     binaryFile = {binaryFile};
 end
 
-[csvFile,csvPath] = uigetfile('*.csv','Channels of Interest: Select a CSV File to Open');
+[csvFile,csvPath] = uigetfile('C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\ChannelLists\*.csv','Channels of Interest: Select a CSV File to Open');
 if isa(csvFile,'double')
     answer=questdlg('No channel is selected! Do you want to include all channels?', 'Warning!', 'Yes', 'No', 'No');
     if ~isequal(answer,'Yes')
@@ -41,7 +41,7 @@ if isa(selpath,'double')
 end
 
 %% Read AP binary files and write them into csc files
-answer=questdlg('Do you use Neuropixels 1.0 or 2.0?', 'Warning!', 'NP 1.0', 'NP 2.0', 'NP 2.0');
+answer=questdlg('Which Neuropixels probe have you used?', 'Warning!', 'NP 1.0', 'NP 2.0', 'NP 2.0');
 if isequal(answer,'NP 1.0')
     disp('Neuropixels 1.0 is selected!')
     NP = 1;
@@ -53,7 +53,7 @@ else
     peak2peak = 12.5*1e-3; % 12.5 mV for NP 2.0
     bits = 14; % 14-bit for NP 2.0
 end
-chunksize = 300; % almost 5 seconds: 5 sec x 30Khz / 512 sample
+chunksize = 300; % 300 samples of length 512, almost 5 seconds: 5 sec x 30Khz / 512 sample
 Nlx_ADBitVolts = 0.000000036621093749999997;
 voltperbit = peak2peak/2^bits/Nlx_ADBitVolts;
 
@@ -156,6 +156,8 @@ start2= tic;
 system(['ParmsGenerationPipeline.bat "' selpath filesep 'B']);
 fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to create the parms file.\n']);
 beep;
+%% 
+system('addDLCPosToParms.py ')
 %% Zipping
 % disp('Compression started ...')
 % system(['cd ' selpath '; zip All_CSCs.zip CSC*.ncs; cd ' pwd]);
