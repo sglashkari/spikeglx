@@ -141,16 +141,17 @@ ncsFiles = dir([selpath filesep '*.ncs']);
 i = 0;
 for j=range
     i = i+1;
-    copyfile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpath filesep 'B' filesep 'CSC_B' num2str(i) '.ncs']);
+    movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpath filesep 'B' filesep 'CSC_B' num2str(i) '.ncs']);
 end
 copyfile('VideoReport', [selpath filesep 'B' filesep 'VideoReport']);
 copyfile('VideoSampling', [selpath filesep 'B' filesep 'VideoSampling']);
 %% Vyash's Analysis
 beep;
-Vyashpath = uigetdir('C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms','Select Vyash''s Code Directory');
-if isa(Vyashpath,'double')
-    return;
-end
+Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
+% Vyashpath = uigetdir(Vyashpath,'Select Vyash''s Code Directory');
+% if isa(Vyashpath,'double')
+%     return;
+% end
 cd(Vyashpath)
 start2= tic;
 system(['ParmsGenerationPipeline.bat "' selpath filesep 'B']);
