@@ -44,3 +44,9 @@ octave-workspace
 
 # Pos.p files
 [Pp]os.p*
+
+# For now
+balazs.m
+controlVelmex.m
+sync_em.m
+test.m

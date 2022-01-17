@@ -4,7 +4,7 @@
 %
 %   See also LAPDETECTOR, ANALYZEDATA.
 %
-%   SGL 2021-01-31 (updated 2022-01-16)
+%   SGL 2022-01-16 (originally 2021-01-31)
 %
 
 clc; clear;
@@ -34,11 +34,11 @@ exp.date = datetime(extractBefore(meta.fileCreateTime,'T'),'InputFormat','yyyy-M
 
 % finding rat number and day number
 if exp.date < datetime(2021,12,31,'TimeZone','America/New_York') &&  exp.date > datetime(2021,11,10,'TimeZone','America/New_York')
-    exp.name = exp.date;
+    exp.name = datestr(exp.date);
     exp.rat_no = 980;
-    exp.day = exp.date;
+    exp.day = day(exp.date);
 end
-%% Neural Data (updated 2022-01-16)
+%% Neural Data
 start = tic;
 listing = dir(fullfile(selparentpath,'**','cl-maze*.*'));
 folders = {listing.folder}';
@@ -55,7 +55,7 @@ cluster_no(isnan(cluster_no))=0;    % cluster 0
 A = cellfun(@(x) importdata(x,',',13), absolue_paths, 'UniformOutput', false);
 toc
 
-%% Position data (updated 2022-01-16)
+%% Position data
 % Read tracking data from file
 % The table should have t, x, y, (hd) as headers
 csvFile = fullfile(csvPath, csvFile);
@@ -84,7 +84,7 @@ pos.s = vecnorm([pos.vx pos.vy]')'; % speed in cm/sec
 %pos.hd = atan2d(pos.vy,pos.vx); % estimation of hd based
 %pos.ax = gradient(pos.vx)./gradient(pos.t); % ax in cm/sec
 
-%% spike data (updated 2022-01-16)
+%% spike data
 cluster(N).name ='';
 for index = 1:N
     cluster(index).name = [region(index) '_shank' num2str(sh_no(index)) '_c' num2str(cluster_no(index))];
@@ -106,7 +106,7 @@ for index = 1:N
 end
 
 %% Saving
-toc
+toc(start)
 mat_filename = fullfile(selparentpath,'data.mat');
 save(mat_filename,'pos','cluster','exp','ppcm', 'offset');
 disp(['File ' mat_filename ' has been created!'])
