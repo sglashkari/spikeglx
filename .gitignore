@@ -1,3 +1,4 @@
+# Neuropixels
 *.ap.bin
 *.ap.meta
 
@@ -48,5 +49,5 @@ octave-workspace
 # For now
 balazs.m
 controlVelmex.m
-sync_em.m
+sync_em*.m
 test.m

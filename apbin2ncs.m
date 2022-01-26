@@ -23,7 +23,7 @@ elseif isa(binaryFile,'char')
     binaryFile = {binaryFile};
 end
 
-[csvFile,csvPath] = uigetfile('C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\ChannelLists\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
+[csvFile,csvPath] = uigetfile('D:\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
 if isa(csvFile,'double')
     return;
 elseif isa(csvFile,'char')
@@ -68,7 +68,7 @@ for l = 1:length(csvFile)
     selpath = fullfile(selparentpath, extractBefore(csvFile{l},'.csv'));
     
     if ~exist(selpath, 'dir')
-        fprintf('Creating a %s directory ...\n', selpath)
+        fprintf('Creating %s directory ...\n', selpath)
         mkdir(selpath);
         
         %% Read AP binary files and write them into csc files
@@ -110,10 +110,12 @@ for l = 1:length(csvFile)
             for i=1:n-1
                 Samples = fread(binFile, [nChan, 512*chunksize], 'int16=>double')'; % (512xchunksize) x 385
                 Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset
-                Samples(:,range) = Samples(:,range) - mean(Samples(:,range),2); % CAR
+                Samples(:,range) = Samples(:,range) - median(Samples(:,range),2); % CAR (changed from mean to median SGL 2021-01-21)
                 Samples = -voltperbit * Samples; % microvolts to bits INVERTED
                 
                 TimeStamp = (tStart{k} - tStart{1} + (i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt )*1e6; % in microseconds
+                Ttime = (i-1)*512*chunksize*dt:dt:(i*512*chunksize-1)*dt;
+               
                 SampleFreq=str2double(meta.imSampRate);
                 NumValidSamples=512;
                 
@@ -141,16 +143,18 @@ for l = 1:length(csvFile)
         end
         fprintf(['It took ' datestr(seconds(toc(start1)),'HH:MM:SS') ,' to read and write files.\n\n']);
         
-        %% Bandpass filter 600 - 6000
+        %% Bandpass filter 600 - 6000, theta 6 - 12
         disp('Filtering started ...')
         start2= tic;
         for j=range
             [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
             data_filtered = filterlfp(time, data, 600, 6000);
             write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            fprintf('Filtering: %.0f seconds, %.0f%% done.\n',toc(start2), find(range==j)/length(range)*100)
+            data_filtered = filterlfp(time, data, 6, 12);
+            write_bin_csc([selpath filesep 'Theta' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
+            fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
         end
-        fprintf(['It took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
+        fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
         %% Prep for Vyash's Analysis
         selpathB = [selpath filesep 'B'];
         mkdir(selpathB);
@@ -158,7 +162,10 @@ for l = 1:length(csvFile)
         i = 0;
         for j=range
             i = i+1;
-            movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']);
+            movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']); % changed
+            if i ~= j-1
+                movefile([selpath filesep 'Theta' num2str(j-1) '.ncs'], [selpath filesep 'Theta' num2str(i) '.ncs']);
+            end
         end
         copyfile('VideoReport', [selpathB filesep 'VideoReport']);
         copyfile('VideoSampling', [selpathB filesep 'VideoSampling']);

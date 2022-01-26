@@ -182,7 +182,8 @@ for l = 1:length(paramspath)
     % writing parms_B_withPos.Ntt.parms and parms_B_withPos.waveforms
     system(['python addDLCPosToParms.py ' fullfile(paramspath{l},paramsfilename{l}) ' ' pos_p_ascii_file_name]);
     parmsname = extractBefore(paramsfilename{l},'.Ntt.parms');
-    copyfile(fullfile(paramspath{l},[parmsname '.waveforms']),fullfile(paramspath{l},[parmsname '_withPos.waveforms']));
+    movefile(fullfile(paramspath{l},[parmsname '.waveforms']),fullfile(paramspath{l},[parmsname '_withPos.waveforms']));
+    delete(fullfile(paramspath{l},paramsfilename{l}));
 end
 %%
 cd(thisFilePath);
