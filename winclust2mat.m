@@ -18,6 +18,7 @@ end
 if isa(csvFile,'double')
     return;
 end
+csvFile = fullfile(csvPath, csvFile);
 
 selparentpath = uigetdir('D:\Analysis','Select the Main Experiment Directory');
 if isa(selparentpath,'double')
@@ -59,18 +60,27 @@ fprintf(['It took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);
 %% Position data
 % Read tracking data from file
 % The table should have t, x, y, (hd) as headers
-csvFile = fullfile(csvPath, csvFile);
 T = readtable(csvFile);
 idx = T.x>=0; % condition for successful tracking (this need to be adjusted depending on the tracker)
-Tf = T(idx,:); % filtered table
+%figure(1); clf; plot(T.frame_no(idx),T.x(idx),'.r');
 
+%% Exclude bad tracking data points
+bad_frames = [];
+switch exp.date
+    case '10-Dec-2021'
+        bad_frames = [45202:45289 45967:46066 47688:47755]; % [inital final)
+end
+idx(bad_frames)=0;
+%hold on; plot(T.frame_no(idx),T.x(idx),'.k'); pause;
+
+%%
 % position
 % 2020-03 5 ft = 1524 mm = 480 pixels (each pixel = 3.175 mm)
 % 2020-10 3 ft = 914 mm = 840 pixels = norm([296 372]-[1136 348],2) >> each pixel ~ 1.1 mm
 % 2021-12 3 ft = 914 mm = 662 pixels = norm([1366 229.3]-[704 206.156]) >> each pixel ~ 1.4 mm
 ppcm = norm([1366 229.3]-[704 206.156])/91.4; % pixels per cm
-pos.x = Tf.x / ppcm; % cm
-pos.y = Tf.y / ppcm; % cm
+pos.x = T.x(idx) / ppcm; % cm
+pos.y = T.y(idx) / ppcm; % cm
 
 % time
 [~,~,t_pulse_np] = read_sync_apbin(binaryFile, path);
@@ -86,7 +96,7 @@ else
     pos.t = T.t + offset; % in seconds
 end
 pos.t=pos.t(idx);
-pos.frame = Tf.frame_no; % frame number starts from 0
+pos.frame = T.frame_no(idx); % frame number starts from 0
 
 % velocity
 pos.vx = gradient(pos.x)./gradient(pos.t); % Vx in cm/sec
