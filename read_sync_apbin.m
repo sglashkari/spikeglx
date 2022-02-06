@@ -48,7 +48,7 @@ if nargout == 0
     plot(t_fall,zeros(size(t_fall)),'o')
     
     fprintf('Neuropixels: On average frames were taken every %.3f milliseconds. \n', 1000*mean(diff(t_fall)));
-    fprintf('Neuropixels: Number of pulses were %d.\n',length(t_fall))
+    fprintf('Neuropixels: Number of pulses were %d.\n',length(t_fall));
     clear time;
 end
 end

@@ -49,5 +49,4 @@ octave-workspace
 # For now
 balazs.m
 controlVelmex.m
-sync_em*.m
 test.m

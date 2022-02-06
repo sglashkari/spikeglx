@@ -14,7 +14,7 @@ function [rhythm, phase, mag]= filterlfp(t, lfp, w, wch)
 %
 
 if nargin < 2
-    [t, lfp] = readcsc;
+    [t, lfp] = read_bin_csc;
 end
 
 Ts = mean(diff(t));

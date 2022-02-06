@@ -4,7 +4,7 @@ if nargin == 0
     close all
     a = [300:10:360 10:10:150];
     a = a + 5*(rand(size(a))-0.5);
-    a(randperm(length(a),10))=-99
+    a(randperm(length(a),10))=-99;
 else
     a = hd';
 end
