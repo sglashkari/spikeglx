@@ -20,6 +20,11 @@ if isa(csvFile,'double')
 end
 csvFile = fullfile(csvPath, csvFile);
 
+[forceFile,forcePath] = uigetfile('D:\NI-Data\force.mat','Select a mat File to Open');
+if isa(forceFile,'double')
+    return;
+end
+
 selparentpath = uigetdir('D:\Analysis','Select the Main Experiment Directory');
 if isa(selparentpath,'double')
     return;
@@ -39,6 +44,7 @@ if exp.date < datetime(2021,12,31,'TimeZone','America/New_York') &&  exp.date > 
     exp.rat_no = 980;
     exp.day = day(exp.date);
 end
+
 %% Neural Data
 disp('Reading clusters data ...')
 start = tic;
@@ -49,7 +55,7 @@ absolue_paths = fullfile(folders, names);
 N = length(listing); % number of clusters
 
 sh_no = str2double(extractBetween(folders,'Shank',filesep));
-region = char(convertCharsToStrings(extractBetween(folders,[selparentpath filesep],'-Shank'))); % like CA1, CA3, ...
+region = char(convertCharsToStrings(extractBetween(folders,[selparentpath filesep],'-Shank'))); % like CA1, CA3, PPC
 maze_no = str2double(extractBetween(names,'maze','.'));
 cluster_no = str2double(extractAfter(names,'.'));
 cluster_no(isnan(cluster_no))=0;    % cluster 0
@@ -57,14 +63,14 @@ cluster_no(isnan(cluster_no))=0;    % cluster 0
 A = cellfun(@(x) importdata(x,',',13), absolue_paths, 'UniformOutput', false);
 fprintf(['It took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);
 
-%% Position data
+%% Camera data
 % Read tracking data from file
 % The table should have t, x, y, (hd) as headers
 T = readtable(csvFile);
 idx = T.x>=0; % condition for successful tracking (this need to be adjusted depending on the tracker)
 %figure(1); clf; plot(T.frame_no(idx),T.x(idx),'.r');
 
-%% Exclude bad tracking data points
+% Exclude bad tracking data points
 bad_frames = [];
 switch exp.date
     case '10-Dec-2021'
@@ -73,7 +79,6 @@ end
 idx(bad_frames)=0;
 %hold on; plot(T.frame_no(idx),T.x(idx),'.k'); pause;
 
-%%
 % position
 % 2020-03 5 ft = 1524 mm = 480 pixels (each pixel = 3.175 mm)
 % 2020-10 3 ft = 914 mm = 840 pixels = norm([296 372]-[1136 348],2) >> each pixel ~ 1.1 mm
@@ -86,17 +91,24 @@ pos.y = T.y(idx) / ppcm; % cm
 [~,~,t_pulse_np] = read_sync_apbin(binaryFile, path);
 if length(t_pulse_np)==height(T)
     fprintf('Number of pulses in Neuropixels and camera were the same: %d.\n',length(t_pulse_np));
-    offset = t_pulse_np - T.t;
     pos.t = t_pulse_np; % in seconds
 else
     warning('Number of pulses do not match between Neuropixels and camera.');
     fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np));
     fprintf('Camera: Number of frames taken were %d.\n',height(T));
-    offset = t_pulse_np(1)- T.t(1);
-    pos.t = T.t + offset; % in seconds
+    pos.t = sync_em(t_pulse_np,T.t); % in seconds
 end
 pos.t=pos.t(idx);
 pos.frame = T.frame_no(idx); % frame number starts from 0
+pos.len = T.ditch_length(idx);
+
+% Balazs's quaternion
+pos.p = [T.pos_1(idx) T.pos_2(idx) T.pos_3(idx)];
+pos.q = [T.rot_4(idx) T.rot_1(idx) T.rot_2(idx) T.rot_3(idx)];
+[yaw, pitch, roll] = quat2angle(pos.q);
+pos.yaw = rad2deg(yaw);
+pos.pitch = rad2deg(pitch);
+pos.roll = rad2deg(roll);
 
 % velocity
 pos.vx = gradient(pos.x)./gradient(pos.t); % Vx in cm/sec
@@ -113,13 +125,27 @@ plot(pos.t,pos.vx,'.')
 ylabel('vx')
 linkaxes([ax1 ax2],'x')
 
+%% Load cell data
+load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_daq','f1_filt','f2_filt','f3_filt')
+% time
+if length(t_pulse_np)==length(t_pulse_daq)
+    fprintf('Number of pulses in Neuropixels and NI DAQ were the same: %d.\n',length(t_pulse_np));
+    daq.t = interp1(t_pulse_daq,t_pulse_np,t,'linear','extrap'); % in seconds
+else
+    warning('Number of pulses do not match between Neuropixels and NI DAQ.');
+    fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np));
+    fprintf('NI DAQ: Number of pulses were %d.\n',length(t_pulse_daq));
+    daq.t = t + t_pulse_np(1) - t_pulse_daq(1); % in seconds
+end
+daq.loadcell = [f1;f2;f3];
+daq.filt.loadcell = [f1_filt;f2_filt;f3_filt];
+
 %% spike data
 cluster(N).name ='';
 for index = 1:N
     cluster(index).name = [region(index,:) '_shank' num2str(sh_no(index)) '_cluster' num2str(cluster_no(index))];
     cluster(index).region = region(index,:);
     cluster(index).sh = sh_no(index);
-    cluster(index).tt = cluster(index).sh;  % sh for shank same as tt for tetrode
     cluster(index).m = maze_no(index);
     cluster(index).cl = cluster_no(index);
     cluster(index).no = index;
@@ -137,6 +163,6 @@ end
 
 %% Saving
 mat_filename = fullfile(selparentpath,'data.mat');
-save(mat_filename,'pos','cluster','exp','ppcm', 'offset');
+save(mat_filename,'pos','cluster','exp','ppcm', 'daq');
 disp(['File ' mat_filename ' has been created!'])
 fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);
