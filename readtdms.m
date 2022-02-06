@@ -1,12 +1,12 @@
 clear; clc; close all
 %%
-[tdmsFile,tdmsPath] = uigetfile('D:\NI-Data\test\data.tdms','Tracking Data: Select a tdms File to Open');
+[tdmsFile,tdmsPath] = uigetfile('D:\NI-Data\test\data.tdms','Select a tdms File to Open');
 if isa(tdmsFile,'double')
     return;
 end
+%%
 tic
-tdmsFile = fullfile(tdmsPath, tdmsFile);
-A = TDMS_getStruct(tdmsFile);
+A = TDMS_getStruct(fullfile(tdmsPath,'data.tdms'));
 toc
 
 try % before Dec 13, 2021
@@ -36,47 +36,68 @@ catch
         end
     end
 end
-data = [data0; data1-1; data2];
-sync = [data3; data4];
-figure;
-plot(t, sync)
 
-figure;
-plot(t, data,'-.')
-% hold on
-% data_filtered = filterlfp(t,data,0.1,30);
-% plot(t, data_filtered)
-figure
+%%
+figure(10)
 plot(t,data3>2.5,'.')
 
-
 % falling edge detection
-locations = (data3 <= 2.5);
+locations = (data3 > 2.5);
 diff_locations = [0 diff(locations)];
-index = (diff_locations == 1);
+index = (diff_locations == -1); % falling
 hold on
 t_fall = t(index);
 plot(t_fall,zeros(size(t_fall)),'o')
 fprintf('On average frames were taken every %.6f milliseconds. \n', 1000*mean(diff(t_fall)));
 length(t_fall)
 
-plot(t, data3,'-.'); hold on; plot(t, data,'-.');
+%% 
+f1 = data0/2 * 9.81; % Newton
+f2 = (data1-median(data1))/2 * 9.81; % Newton
+f3 = data2/2 * 9.81; % Newton
+t_pulse_daq = t_fall;
+save(fullfile(tdmsPath,'force.mat'),'t','f1','f2','f3','t_pulse_daq');
+toc
 %xlim([1262.2 1362.5])
 %%
-try
-    data5 = A.Untitled.Untitled_5.data;
-%    data6 = A.Untitled.Untitled_6.data;
-%    data7 = A.Untitled.Untitled_7.data;
-%    rat = A.Untitled.Untitled_8.data;
-catch
-end
+tic
+load(fullfile(tdmsPath,'force.mat'),'t','f1','f2','f3','t_pulse_daq')
+toc
+figure(1); clf
+plot(t,f1,'.')
+%xlim([1364 1369])
+figure(2); clf
+plot(t,f2,'.')
+%xlim([1364 1369])
+figure(3); clf
+plot(t,f3,'.')
+%xlim([1364 1369])
+toc
 
-ax1 = subplot(4,1,1);
-plot(t,data)
-ax2 = subplot(4,1,2);
-plot(t,data3)
-ax3 = subplot(4,1,3);
-plot(t,data4)
-ax4 = subplot(4,1,4);
-plot(t,data5)
-linkaxes([ax1 ax2 ax3 ax4],'x')
+
+
+%% notch filter
+fs = 1/(t(2)-t(1));
+wo = 61/(fs/2);  
+bw = wo;
+[b,a] = iirnotch(wo,bw);
+f1_filt = filtfilt(b,a,f1);
+figure(1); hold on
+plot(t,f1_filt)
+
+wo = 23/(fs/2);  
+bw = wo;
+[b,a] = iirnotch(wo,bw);
+f2_filt = filtfilt(b,a,f2);
+figure(2); hold on
+plot(t,f2_filt)
+
+wo = 33/(fs/2);  
+bw = wo;
+[b,a] = iirnotch(wo,bw);
+f3_filt = filtfilt(b,a,f3);
+figure(3); hold on
+plot(t,f3_filt)
+
+%%
+save(fullfile(tdmsPath,'force.mat'),'f1_filt','f2_filt','f3_filt','-append');
