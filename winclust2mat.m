@@ -83,7 +83,13 @@ idx(bad_frames)=0;
 % 2020-03 5 ft = 1524 mm = 480 pixels (each pixel = 3.175 mm)
 % 2020-10 3 ft = 914 mm = 840 pixels = norm([296 372]-[1136 348],2) >> each pixel ~ 1.1 mm
 % 2021-12 3 ft = 914 mm = 662 pixels = norm([1366 229.3]-[704 206.156]) >> each pixel ~ 1.4 mm
-ppcm = norm([1366 229.3]-[704 206.156])/91.4; % pixels per cm
+
+if exp.rat_no >= 980
+    ppcm = norm([1366 229.3]-[704 206.156])/91.4; % pixels per cm
+else
+    ppcm = norm([296 372]-[1136 348],2)/91.4; % pixels per cm
+end
+
 pos.x = T.x(idx) / ppcm; % cm
 pos.y = T.y(idx) / ppcm; % cm
 
@@ -102,7 +108,7 @@ pos.t=pos.t(idx);
 pos.frame = T.frame_no(idx); % frame number starts from 0
 pos.len = T.ditch_length(idx);
 
-% Balazs's quaternion
+% Balazs's tracking (position and quaternion)
 pos.p = [T.pos_1(idx) T.pos_2(idx) T.pos_3(idx)];
 pos.q = [T.rot_4(idx) T.rot_1(idx) T.rot_2(idx) T.rot_3(idx)];
 [yaw, pitch, roll] = quat2angle(pos.q);
@@ -135,7 +141,8 @@ else
     warning('Number of pulses do not match between Neuropixels and NI DAQ.');
     fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np));
     fprintf('NI DAQ: Number of pulses were %d.\n',length(t_pulse_daq));
-    daq.t = t + t_pulse_np(1) - t_pulse_daq(1); % in seconds
+    t_pulse_daq_in_np = sync_em(t_pulse_np,t_pulse_daq'); % in seconds
+    daq.t = interp1(t_pulse_daq,t_pulse_daq_in_np,t,'linear','extrap'); % in seconds
 end
 daq.loadcell = [f1;f2;f3];
 daq.filt.loadcell = [f1_filt;f2_filt;f3_filt];

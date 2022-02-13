@@ -1,8 +1,16 @@
-%% pos_p_gen generates Pos.p from a given tracking data
+%% CSV2POSP generates Pos.p from a given tracking data in csv format
+% The table should have t, x, y, (hd) as headers
+%
 % full tracking.csv ==> pos.p & pos.p.ascii
-% It creates pos.p files for all the subfolders
-% 2022-01-07
+%
+% creating pos.p files for all the subfolders
+% adding position data to params and waveform files
+%
+%   See also APBIN2NCS, WINCLUST2MAT.
+%
+% Date 2022-01-07
 % Author Shahin G Lashkari
+%
 clear;
 clc; close all
 pixels_width = 640;
@@ -142,14 +150,14 @@ for l = 1:length(paramspath)
     pos_p_file_name = fullfile(posppath,'Pos.p');
     pos_p_ascii_file_name = fullfile(posppath,'Pos.p.ascii');
     
-%     if isfile(pos_p_file_name)
-%         beep;
-%         answer=questdlg('The Pos.p file already exists! Do you want to overwrite it?', 'Warning!', 'Yes', 'No', 'Yes');
-%         if ~isequal(answer,'Yes')
-%             disp('Pos.p was not overwritten!')
-%             return
-%         end
-%     end
+    if isfile(pos_p_file_name)
+        beep;
+        answer=questdlg('The Pos.p file already exists! Do you want to overwrite it?', 'Warning!', 'Yes', 'No', 'Yes');
+        if ~isequal(answer,'Yes')
+            disp('Pos.p was not overwritten!')
+            return
+        end
+    end
     
     file = fopen(pos_p_file_name,'w');
     file_ascii = fopen(pos_p_ascii_file_name,'w');

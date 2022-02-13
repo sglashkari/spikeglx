@@ -1,10 +1,17 @@
 %% apbin2ncs reads a Spike GLX AP bin files to Neuralynx CSC files
 % It also remvoes the DC offset, does common average referencing (CAR) and
-% bandpass filtering (600-6000 Hz & 1-400 Hz).
+% bandpass filtering:
+%   600-6000 Hz: CSC for AP
+%   1-400 Hz: LFP (only for the last channel)
+% At the end, it calls Vyash's code to extract the params and waveform
+% files.
 %
 % *.ap.bin ==> *.ncs
-% This program is written by Shahin G Lashkari
-% Last upgrade: 2022-01-05
+%
+%   See also APBIN2NCS, WINCLUST2MAT.
+%
+% Date 2022-01-05
+% Author Shahin G Lashkari
 %
 % Check:
 % https://github.com/billkarsh/SpikeGLX/blob/master/Markdown/UserManual.md#output-file-format-and-tools
@@ -150,8 +157,10 @@ for l = 1:length(csvFile)
             [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
             data_filtered = filterlfp(time, data, 600, 6000);
             write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            data_filtered = filterlfp(time, data, 1, 400);
-            write_bin_csc([selpath filesep 'LFP' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
+            if j==range(end)
+                data_filtered = filterlfp(time, data, 1, 400);
+                write_bin_csc([selpath filesep 'LFP' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
+            end
             fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
         end
         fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
@@ -163,8 +172,10 @@ for l = 1:length(csvFile)
         i = 0;
         for j=range
             i = i+1;
-            movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']); % changed
-            movefile([selpath filesep 'LFP' num2str(j-1) '.ncs'], [selpathB filesep 'LFP' num2str(i) '.ncs']);
+            movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']);
+            if j==range(end)
+                movefile([selpath filesep 'LFP' num2str(j-1) '.ncs'], [selpathB filesep 'LFP' num2str(i) '.ncs']);
+            end
         end
         copyfile('VideoReport', [selpathB filesep 'VideoReport']);
         copyfile('VideoSampling', [selpathB filesep 'VideoSampling']);
