@@ -104,7 +104,7 @@ figure; plot(pos_x, pixels_height - pos_y,'.')
 axis equal; axis([0 pixels_width 0 pixels_height])
 
 figure; plot(ts*1e-6,pos_x,'.b');
-xlabel('Time (sec)'); ylabel('X position');ylim([0 pixels_width])
+xlabel('Time (sec)'); ylabel('Horizontal position');ylim([0 pixels_width])
 
 if hd_exists
     figure; plot(ts*1e-6,angle,'.b');

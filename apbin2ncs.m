@@ -72,6 +72,7 @@ for l = 1:length(csvFile)
     fprintf('\nChannel list %d from %d channel lists.\n\n',l,length(csvFile));
     
     range = readmatrix(fullfile(csvPath, csvFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
+    range = reshape(range,1,[]); % making range a row vector
     selpath = fullfile(selparentpath, extractBefore(csvFile{l},'.csv'));
     
     if ~exist(selpath, 'dir')
@@ -157,10 +158,10 @@ for l = 1:length(csvFile)
             [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
             data_filtered = filterlfp(time, data, 600, 6000);
             write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            if j==range(end)
+            %if j==range(end)
                 data_filtered = filterlfp(time, data, 1, 400);
                 write_bin_csc([selpath filesep 'LFP' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            end
+            %end
             fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
         end
         fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
@@ -173,9 +174,9 @@ for l = 1:length(csvFile)
         for j=range
             i = i+1;
             movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']);
-            if j==range(end)
+            %if j==range(end)
                 movefile([selpath filesep 'LFP' num2str(j-1) '.ncs'], [selpathB filesep 'LFP' num2str(i) '.ncs']);
-            end
+            %end
         end
         copyfile('VideoReport', [selpathB filesep 'VideoReport']);
         copyfile('VideoSampling', [selpathB filesep 'VideoSampling']);

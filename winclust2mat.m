@@ -4,9 +4,9 @@
 %
 %   See also LAPDETECTOR, ANALYZEDATA.
 %
-%   SGL 2022-01-16 (originally 2021-01-31)
+% Date 2022-01-16 (originally 2021-01-31)
+% Author Shahin G Lashkari
 %
-
 clc; clear; close all;
 %% Selecting the appropriate files
 [binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select a Binary File');
