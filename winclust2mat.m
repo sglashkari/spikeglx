@@ -14,11 +14,19 @@ if isa(binaryFile,'double')
     return;
 end
 
-[csvFile,csvPath] = uigetfile('full-tracking.csv','CSV File: Select a Tracking Data to Open');
+[csvFile,csvPath] = uigetfile('Z:\Rat980\full-tracking.csv','CSV File: Select a Tracking Data to Open');
 if isa(csvFile,'double')
     return;
 end
-csvFile = fullfile(csvPath, csvFile);
+
+% [sideTimeFile,sideTimePath] = uigetfile(fullfile(csvPath,'side_times.csv'),'Side Camera Times: Select a CSV File to Open');
+% if isa(sideTimeFile,'double')
+%     return;
+% end
+
+csvFile = fullfile(csvPath, 'full-tracking.csv');
+sideTimeFile = fullfile(csvPath, 'side_times.csv');
+%dlcFilename = fullfile(csvPath, 'dlc.csv');
 
 [forceFile,forcePath] = uigetfile('D:\NI-Data\force.mat','Select a mat File to Open');
 if isa(forceFile,'double')
@@ -43,6 +51,8 @@ if exp.date < datetime(2021,12,31,'TimeZone','America/New_York') &&  exp.date > 
     exp.name = datestr(exp.date);
     exp.rat_no = 980;
     exp.day = day(exp.date);
+else
+    error('specify the rat number!');
 end
 
 %% Neural Data
@@ -67,7 +77,9 @@ fprintf(['It took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);
 % Read tracking data from file
 % The table should have t, x, y, (hd) as headers
 T = readtable(csvFile);
-idx = T.x>=0; % condition for successful tracking (this need to be adjusted depending on the tracker)
+idx1 = T.x>=0; % condition for successful tracking => idx1: index for single-marker tracker
+%(this need to be adjusted depending on the tracker)
+
 %figure(1); clf; plot(T.frame_no(idx),T.x(idx),'.r');
 
 % Exclude bad tracking data points
@@ -76,7 +88,7 @@ switch exp.date
     case '10-Dec-2021'
         bad_frames = [45202:45289 45967:46066 47688:47755]; % [inital final)
 end
-idx(bad_frames)=0;
+idx1(bad_frames)=0;
 %hold on; plot(T.frame_no(idx),T.x(idx),'.k'); pause;
 
 % position
@@ -90,31 +102,23 @@ else
     ppcm = norm([296 372]-[1136 348],2)/91.4; % pixels per cm
 end
 
-pos.x = T.x(idx) / ppcm; % cm
-pos.y = T.y(idx) / ppcm; % cm
+pos.x = T.x(idx1) / ppcm; % cm
+pos.y = T.y(idx1) / ppcm; % cm
 
 % time
 [~,~,t_pulse_np] = read_sync_apbin(binaryFile, path);
 if length(t_pulse_np)==height(T)
     fprintf('Number of pulses in Neuropixels and camera were the same: %d.\n',length(t_pulse_np));
-    pos.t = t_pulse_np; % in seconds
+    pos.time = t_pulse_np; % in seconds
 else
     warning('Number of pulses do not match between Neuropixels and camera.');
     fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np));
     fprintf('Camera: Number of frames taken were %d.\n',height(T));
-    pos.t = sync_em(t_pulse_np,T.t); % in seconds
+    pos.time = sync_em(t_pulse_np,T.t); % in seconds
 end
-pos.t=pos.t(idx);
-pos.frame = T.frame_no(idx); % frame number starts from 0
-pos.len = T.ditch_length(idx);
-
-% Balazs's tracking (position and quaternion)
-pos.p = [T.pos_1(idx) T.pos_2(idx) T.pos_3(idx)];
-pos.q = [T.rot_4(idx) T.rot_1(idx) T.rot_2(idx) T.rot_3(idx)];
-[yaw, pitch, roll] = quat2angle(pos.q);
-pos.yaw = rad2deg(yaw);
-pos.pitch = rad2deg(pitch);
-pos.roll = rad2deg(roll);
+pos.t=pos.time(idx1);
+pos.frame = T.frame_no(idx1); % frame number starts from 0
+pos.len = T.ditch_length(idx1);
 
 % velocity
 pos.vx = gradient(pos.x)./gradient(pos.t); % Vx in cm/sec
@@ -131,41 +135,113 @@ plot(pos.t,pos.vx,'.')
 ylabel('vx')
 linkaxes([ax1 ax2],'x')
 
-%% Load cell data
-load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_daq','f1_filt','f2_filt','f3_filt')
+%% Balazs's tracking (position and quaternion)
+close all;
+pos.p = [T.pos_1 T.pos_2 T.pos_3];
+pos.q = [T.rot_4 T.rot_1 T.rot_2 T.rot_3];
+pos.success = T.success;
+pos.p = pos.p(idx1,:);
+pos.q = pos.q(idx1,:);
+pos.success = pos.success(idx1);
+idx2 = pos.success==1; % idx2: index for the crown tracker
+
+[yaw, pitch, roll] = quat2angle(pos.q); % idx1: index for single-marker tracker
+pos.yaw = rad2deg(yaw);
+pos.pitch = rad2deg(pitch);
+pos.roll = rad2deg(roll);
+
+% correction for the miscalibration of the table
+coefficients = polyfit(pos.p(idx2,1),pos.p(idx2,3), 1);
+phi = atan(coefficients(1))*180/pi;
+R = [cosd(phi) 0 sind(phi); 0 1 0; -sind(phi) 0 cosd(phi)];
+figure
+subplot(2,1,1); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+pos.p = (100*R*pos.p')';  % 100 for m to cm
+subplot(2,1,2); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+
+% exclude the tracking data when the crown is occluded as NaN
+figure
+plot3(pos.p(:,1),pos.p(:,2),pos.p(:,3),'.'); hold on
+if strcmp('21-Dec-2021',exp.name)
+    idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
+    idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
+else
+    idx3 = zeros(size(idx2));
+    idx5 = idx3;
+end
+idx4 = ~idx2|idx3|idx5; % need to be excluded
+
+figure(2)
+pos.p = interp1(pos.t(~idx4),pos.p(~idx4,:),pos.t);
+plot3(pos.p(idx4,1),pos.p(idx4,2),pos.p(idx4,3),'or'); hold on
+
+pos.p(idx4,1:3)=nan;
+figure(2); plot3(pos.p(:,1),pos.p(:,2),pos.p(:,3),'.g'); hold on
+
+%% DAQ data (load cell, side view camera pulses)
+try % for temporary fix before updating force.mat files
+    load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_cam_top','t_pulse_cam_side','f1_filt','f2_filt','f3_filt');
+    t_pulse_cam_top = reshape(t_pulse_cam_top,[],1);
+    t_pulse_cam_side = reshape(t_pulse_cam_side,[],1);
+catch
+    load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_daq','f1_filt','f2_filt','f3_filt');
+    t_pulse_cam_top = t_pulse_daq;
+end
 % time
-if length(t_pulse_np)==length(t_pulse_daq)
+if length(t_pulse_np)==length(t_pulse_cam_top)
     fprintf('Number of pulses in Neuropixels and NI DAQ were the same: %d.\n',length(t_pulse_np));
-    daq.t = interp1(t_pulse_daq,t_pulse_np,t,'linear','extrap'); % in seconds
+    daq.t = interp1(t_pulse_cam_top,t_pulse_np,t,'linear','extrap'); % in seconds
 else
     warning('Number of pulses do not match between Neuropixels and NI DAQ.');
     fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np));
-    fprintf('NI DAQ: Number of pulses were %d.\n',length(t_pulse_daq));
-    t_pulse_daq_in_np = sync_em(t_pulse_np,t_pulse_daq'); % in seconds
-    daq.t = interp1(t_pulse_daq,t_pulse_daq_in_np,t,'linear','extrap'); % in seconds
+    fprintf('NI DAQ: Number of pulses were %d.\n',length(t_pulse_cam_top));
+    t_pulse_daq_in_np = sync_em(t_pulse_np,t_pulse_cam_top); % in seconds
+    daq.t = interp1(t_pulse_cam_top,t_pulse_daq_in_np,t,'linear','extrap'); % in seconds
 end
 daq.loadcell = [f1;f2;f3];
 daq.filt.loadcell = [f1_filt;f2_filt;f3_filt];
 
+%% Camera (side view)
+T_side = readmatrix(sideTimeFile);
+t_cam_side = round(T_side(:,5),3); % seconds (with milliseconds precision)
+try
+    t_side_cam_in_daq = sync_em(t_pulse_cam_side,t_cam_side);
+    pos.side.t = interp1(t, daq.t, t_side_cam_in_daq,'linear','extrap'); % side view camera time in neuropixel time
+    pos.side.frame = 0:length(pos.side.t)-1;
+catch
+end
+
+%% Deep lab cut (side view)
+% try
+%     dlc = readtable(dlcFilename);
+%     dlc.z = dlc.y;
+%     dlc.t = pos.side.t(ismember(dlc.frame,pos.side.frame));
+%     figure;
+%     plot(dlc.t,dlc.z);
+%     title('Elevation')
+%     xlim('Time (sec)')
+% catch
+%     dlc = [];
+% end
 %% spike data
 cluster(N).name ='';
-for index = 1:N
-    cluster(index).name = [region(index,:) '_shank' num2str(sh_no(index)) '_cluster' num2str(cluster_no(index))];
-    cluster(index).region = region(index,:);
-    cluster(index).sh = sh_no(index);
-    cluster(index).m = maze_no(index);
-    cluster(index).cl = cluster_no(index);
-    cluster(index).no = index;
-    %cluster(index).ti = str2double(A{index}.textdata{12})*1e-6; % sec
-    %cluster(index).tf = str2double(A{index}.textdata{13})*1e-6; % esc
-    cluster(index).t = (A{index}.data(:,18))*1e-6; % sec
+for idx2 = 1:N
+    cluster(idx2).name = [region(idx2,:) '_shank' num2str(sh_no(idx2)) '_cluster' num2str(cluster_no(idx2))];
+    cluster(idx2).region = region(idx2,:);
+    cluster(idx2).sh = sh_no(idx2);
+    cluster(idx2).m = maze_no(idx2);
+    cluster(idx2).cl = cluster_no(idx2);
+    cluster(idx2).no = idx2;
+    % ineterpolation for time (excluding times that the rat is occluded)
+    cluster(idx2).t = (A{idx2}.data(:,18))*1e-6; % sec
     % interpolation for position
-    cluster(index).x = interp1(pos.t, pos.x, cluster(index).t);
-    cluster(index).y = interp1(pos.t, pos.y, cluster(index).t);
+    cluster(idx2).x = interp1(pos.t, pos.x, cluster(idx2).t);
+    cluster(idx2).y = interp1(pos.t, pos.y, cluster(idx2).t);
+    cluster(idx2).p = interp1(pos.t, pos.p, cluster(idx2).t);
     % interpolation for velocity
-    cluster(index).vx = interp1(pos.t, pos.vx, cluster(index).t);
-    cluster(index).vy = interp1(pos.t, pos.vy, cluster(index).t);
-    cluster(index).s = vecnorm([cluster(index).vx cluster(index).vy]')';
+    cluster(idx2).vx = interp1(pos.t, pos.vx, cluster(idx2).t);
+    cluster(idx2).vy = interp1(pos.t, pos.vy, cluster(idx2).t);
+    cluster(idx2).s = vecnorm([cluster(idx2).vx cluster(idx2).vy]')';
 end
 
 %% Saving
