@@ -22,33 +22,46 @@ numCh=32;
 answer = inputdlg('Enter a value for threshold (in microVolts)','Threshold', [1 45],{'80'});
 thresh = str2double(answer);
 fprintf('Threshold is %d uV.\n',thresh)
-%% Read data from files
-[binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
+%% Selecting the files and directories
+[binaryFile,path] = uigetfile('D:\Rat1024\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
 elseif isa(binaryFile,'char')
     binaryFile = {binaryFile};
 end
 
-[csvFile,csvPath] = uigetfile('D:\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
+% Blocks of 32 recording sites
+[csvFile,csvPath] = uigetfile('D:\Rat1024\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
 if isa(csvFile,'double')
     return;
 elseif isa(csvFile,'char')
     csvFile = {csvFile};
 end
 
-selparentpath = uigetdir('D:\Analysis','Select the main Directory for Saving CSC Files');
+% References
+[refFile,refPath] = uigetfile('D:\Rat1024\ChannelLog\*.csv','Channels of Reference: Select One or More CSV Files','MultiSelect','on');
+if isa(refFile,'double')
+    refFile = csvFile; % reference is actually the median of 32 channels
+elseif isa(refFile,'char')
+    refFile = cellstr(repmat(refFile,length(csvFile),1))'; % one reference for all blocks
+elseif length(refFile)~= length(csvFile)
+    error('Number of the reference files should match the number of channels of interest');
+end
+
+% Vyash's code
+selparentpath = uigetdir('D:\Rat1024\Analysis','Select the main Directory for Saving CSC Files');
 if isa(selparentpath,'double')
     return;
 end
 
+%% Read data from files
 chunksize = 300; % 300 samples of length 512, almost 5 seconds: 5 sec x 30Khz / 512 sample
 
 % updated 4/29 https://billkarsh.github.io/SpikeGLX/Sgl_help/Metadata_30.html
 meta = ReadMeta(binaryFile{1}, path);
 nChan = str2double(meta.nSavedChans); % 385
 if meta.imDatPrb_type == "0"
-    disp('Neuropixels 1.0 is selected!')
+    disp('Neuropixels 1.0 is detected!')
     NP = 1;
     peak2peak = 5*1e-3; % 5 mV for NP 1.0
     bits = 10; % 10-bit for NP 1.0
@@ -60,11 +73,11 @@ if meta.imDatPrb_type == "0"
     C = {C{1}{4:2:end}};
     gain = zeros(1,nChan);
     for i=1:nChan-1
-        imroArray = cell2mat(textscan(C{i}, '%d %d %d %d %d', 'Delimiter', ' '));
+        imroArray = cell2mat(textscan(C{i}, '%d %d %d %d %d %d', 'Delimiter', ' '));
         gain(i) = imroArray(4);
     end
 elseif meta.imDatPrb_type == "21" || meta.imDatPrb_type == "24"
-    disp('Neuropixels 2.0 is selected!')
+    disp('Neuropixels 2.0 is detected!')
     NP = 2;
     peak2peak = 12.5*1e-3; % 12.5 mV for NP 2.0
     bits = 14; % 14-bit for NP 2.0
@@ -96,6 +109,8 @@ for l = 1:length(csvFile)
     
     range = readmatrix(fullfile(csvPath, csvFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
     range = reshape(range,1,[]); % making range a row vector
+    ref_range = readmatrix(fullfile(refPath, refFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
+    ref_range = reshape(ref_range,1,[]); % making range a row vector
     selpath = fullfile(selparentpath, extractBefore(csvFile{l},'.csv'));
     
     if ~exist(selpath, 'dir')
@@ -141,7 +156,8 @@ for l = 1:length(csvFile)
             for i=1:n-1
                 Samples = fread(binFile, [nChan, 512*chunksize], 'int16=>double')'; % (512xchunksize) x 385
                 Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset
-                Samples(:,range) = Samples(:,range) - median(Samples(:,range),2); % CAR (changed from mean to median SGL 2021-01-21)
+                % referencing: CAR if ref_range == range
+                Samples(:,range) = Samples(:,range) - median(Samples(:,ref_range),2);
                 Samples(:,range) = - Samples(:,range); % INVERTED
                 
                 TimeStamp = (tStart{k} - tStart{1} + (i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt )*1e6; % in microseconds
