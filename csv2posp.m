@@ -53,8 +53,8 @@ start = tic;
 csvFile = fullfile(csvPath, csvFile);
 T = readtable(csvFile);
 try
-    idx = T.x>=0; % condition for successful tracking (this need to be adjusted depending on the tracker)
-    Tf = T(idx,:); % filtered table
+    idx1 = T.x>=0; % condition for successful tracking (this need to be adjusted depending on the tracker)
+    Tf = T(idx1,:); % filtered table
     x = Tf.x;
     y = Tf.y;
 catch
@@ -83,8 +83,10 @@ else
         fprintf('Neuropixels: Number of pulses were %d.\n',length(t_pulse_np))
         fprintf('Camera: Number of frames taken were %d.\n',height(T))
     end
-    disp('Tracking data is syncronized with Neuropixels time!')
-    ts = (Tf.t - Tf.t(1) + t_pulse_np(1)) * 1e6; % in microseconds
+    disp('Tracking data are syncronized with Neuropixels time!')
+    ts = sync_em(t_pulse_np,T.t) * 1e6; % in microseconds
+    % ts = (T.t - T.t(1) + t_pulse_np(1)) * 1e6; % in microseconds
+    ts = ts(idx1);
 end
 
 %% Calculations
@@ -190,8 +192,7 @@ for l = 1:length(paramspath)
     % writing parms_B_withPos.Ntt.parms and parms_B_withPos.waveforms
     system(['python addDLCPosToParms.py ' fullfile(paramspath{l},paramsfilename{l}) ' ' pos_p_ascii_file_name]);
     parmsname = extractBefore(paramsfilename{l},'.Ntt.parms');
-    movefile(fullfile(paramspath{l},[parmsname '.waveforms']),fullfile(paramspath{l},[parmsname '_withPos.waveforms']));
-    delete(fullfile(paramspath{l},paramsfilename{l}));
+    copyfile(fullfile(paramspath{l},[parmsname '.waveforms']),fullfile(paramspath{l},[parmsname '_withPos.waveforms']));
 end
 %%
 cd(thisFilePath);
