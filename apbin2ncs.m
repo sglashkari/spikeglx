@@ -23,7 +23,7 @@ answer = inputdlg('Enter a value for threshold (in microVolts)','Threshold', [1 
 thresh = str2double(answer);
 fprintf('Threshold is %d uV.\n',thresh)
 %% Selecting the files and directories
-[binaryFile,path] = uigetfile('D:\Rat1024\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
+[binaryFile,path] = uigetfile('D:\Rat1055\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
 elseif isa(binaryFile,'char')
@@ -31,7 +31,7 @@ elseif isa(binaryFile,'char')
 end
 
 % Blocks of 32 recording sites
-[csvFile,csvPath] = uigetfile('D:\Rat1024\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
+[csvFile,csvPath] = uigetfile('D:\Rat1055\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
 if isa(csvFile,'double')
     return;
 elseif isa(csvFile,'char')
@@ -39,17 +39,17 @@ elseif isa(csvFile,'char')
 end
 
 % References
-[refFile,refPath] = uigetfile('D:\Rat1024\ChannelLog\*.csv','Channels of Reference: Select One or More CSV Files','MultiSelect','on');
+[refFile,refPath] = uigetfile('D:\Rat1055\ChannelLog\*.csv','Channels of Reference: Select One or More CSV Files','MultiSelect','on');
 if isa(refFile,'double')
     refFile = csvFile; % reference is actually the median of 32 channels
 elseif isa(refFile,'char')
     refFile = cellstr(repmat(refFile,length(csvFile),1))'; % one reference for all blocks
-elseif length(refFile)~= length(csvFile)
-    error('Number of the reference files should match the number of channels of interest');
+% elseif length(refFile)~= length(csvFile)
+%     error('Number of the reference files should match the number of channels of interest');
 end
 
 % Vyash's code
-selparentpath = uigetdir('D:\Rat1024\Analysis','Select the main Directory for Saving CSC Files');
+selparentpath = uigetdir('D:\Rat1055\Analysis','Select the main Directory for Saving CSC Files');
 if isa(selparentpath,'double')
     return;
 end
@@ -89,7 +89,7 @@ else
     error(['Type ' meta.imDatPrb_type ' is not supported!'])
 end
 % voltperbit = peak2peak/2^bits
-voltperbit = Vmax ./ Imax ./ gain;
+voltperbit = Vmax / Imax ./ gain;
 Nlx_ADBitVolts = 0.000000036621093749999997;
 Nlx_bits_per_NP_bits = voltperbit/Nlx_ADBitVolts;
 
@@ -155,7 +155,8 @@ for l = 1:length(csvFile)
             % Body
             for i=1:n-1
                 Samples = fread(binFile, [nChan, 512*chunksize], 'int16=>double')'; % (512xchunksize) x 385
-                Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset
+                Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset 
+                Samples(:,ref_range) = Samples(:,ref_range) - mean(Samples(:,ref_range),1); % remove DC offset from references
                 % referencing: CAR if ref_range == range
                 Samples(:,range) = Samples(:,range) - median(Samples(:,ref_range),2);
                 Samples(:,range) = - Samples(:,range); % INVERTED

@@ -13,8 +13,8 @@ function csv2imro
 clc
 patternType = 3;
 shankChoice = 0;   % 0-3, needed for patternType 0
-botRow =  250;
-refElec = 0;     % 0 for external, 1-4 for tip reference on shank 0-3
+botRow =  576; % 100, 170, 240
+refElec = 1;     % 0 for external, 1-4 for tip reference on shank 0-3, 5 for join tip
 
 
 shank = zeros(384,1,'single');
@@ -55,16 +55,16 @@ switch patternType
         
     case 3
         % customized
-        [csvFile,csvPath] = uigetfile('D:\Rat1024\ChannelLog\IMRO\*.csv','Channel maps: Select a CSV File to Open');
+        [csvFile,csvPath] = uigetfile('D:\Rat1055\ChannelLog\IMRO\*.csv','Channel maps: Select a CSV File to Open');
         if isa(csvFile,'double')
             return;
         end
         T = readtable(fullfile(csvPath,csvFile));
-        nameStr = fullfile(csvPath, extractBefore(csvFile,'.csv'));
+        nameStr = fullfile(csvPath, extractBefore(csvFile,'.csv'))
         shank = T.Shank_no; 
         elecInd = T.Elec_no;
         for i = 1:numel(elecInd)
-            [bank(i), chans(i)] = ElecToChan( shank(i), elecInd(i) );
+            [bank(i), chans(i)] = ElecToChan( shank(i), elecInd(i));
         end
     otherwise
         fprintf('unknown pattern type\n');
@@ -81,7 +81,7 @@ end
 
 if bMapOK
     %open a new file wherever we are
-    fileName = [nameStr,'.imro'];
+    fileName = [nameStr,'.imro']
     nmID = fopen(fileName,'w');
     
     [chans,sortI] = sort(chans);
@@ -93,7 +93,15 @@ if bMapOK
     % print first entry, specifying probe type and number of channels
     fprintf(nmID,'(%d,%d)', 24, 384);
     for i = 1:numel(chans)
-        fprintf(nmID,'(%d %d %d %d %d)', chans(i), shank(i), bank(i), refElec, elecInd(i) );
+        if refElec == 5
+            if i <= 4
+                fprintf(nmID,'(%d %d %d %d %d)', chans(i), shank(i), bank(i), i, elecInd(i) );
+            else
+                fprintf(nmID,'(%d %d %d %d %d)', chans(i), shank(i), bank(i), 1, elecInd(i) );
+            end
+        else
+            fprintf(nmID,'(%d %d %d %d %d)', chans(i), shank(i), bank(i), refElec, elecInd(i) );
+        end
     end
     fprintf(nmID, '\n');
     
