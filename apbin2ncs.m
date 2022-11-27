@@ -49,6 +49,12 @@ elseif isa(refFile,'char')
 end
 
 % Vyash's code
+Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
+Vyashpath = uigetdir(Vyashpath,'Select Vyash''s Code Directory');
+if isa(Vyashpath,'double')
+    return;
+end
+
 selparentpath = uigetdir('D:\Rat1055\Analysis','Select the main Directory for Saving CSC Files');
 if isa(selparentpath,'double')
     return;
@@ -88,17 +94,13 @@ elseif meta.imDatPrb_type == "21" || meta.imDatPrb_type == "24"
 else
     error(['Type ' meta.imDatPrb_type ' is not supported!'])
 end
-% voltperbit = peak2peak/2^bits
-voltperbit = Vmax / Imax ./ gain;
+voltperbit = peak2peak/2^bits;
+% voltperbit = Vmax / Imax ./ gain;
 Nlx_ADBitVolts = 0.000000036621093749999997;
 Nlx_bits_per_NP_bits = voltperbit/Nlx_ADBitVolts;
 
 
-Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
-Vyashpath = uigetdir(Vyashpath,'Select Vyash''s Code Directory');
-if isa(Vyashpath,'double')
-    return;
-end
+
 thisFilePath = pwd;
 
 %%
@@ -176,7 +178,7 @@ for l = 1:length(csvFile)
                         fwrite(cscFile{j}, SampleFreq, 'uint32');
                         fwrite(cscFile{j}, NumValidSamples, 'uint32');
                         % 512 x N
-                        fwrite(cscFile{j}, Nlx_bits_per_NP_bits(j) * Samples((l-1)*512+1:l*512,j), 'int16'); % Convert NP bits to NLX bits
+                        fwrite(cscFile{j}, Nlx_bits_per_NP_bits * Samples((l-1)*512+1:l*512,j), 'int16'); % Convert NP bits to NLX bits
                     end
                 end
                 if mod(i,5*round(n/100))==0 % display progress every 5 percent
