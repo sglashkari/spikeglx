@@ -34,8 +34,7 @@ data = de2bi(data,16);
 data = data(:,7); %7th bit
 time = (0:dt:(length(data)-1)*dt)';
 fclose(binFile);
-fprintf('It took %.1f seconds to read synchronization data.\n\n',toc);
-
+fprintf(['It took ' datestr(seconds(toc),'MM:SS') ' minutes to read synchronization data.\n\n']);
 %%
 
 diff_locations = [0;diff(data==1)];

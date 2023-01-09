@@ -8,35 +8,38 @@
 %
 %   See also APBIN2NCS, WINCLUST2MAT.
 %
-% Date 2022-01-07
+% Date 2022-12-28
 % Author Shahin G Lashkari
 %
 clear;
 clc; close all
 pixels_width = 640;
 pixels_height = 480;
-
+answer = inputdlg({'Rat', 'Date'},'Enter the rat number and the date',[1 30],{'1068', '2022-12-20'});
+rat_no = answer{1};
+date_str = answer{2};
 %% Selecting the appropriate files
-[binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select a Binary File');
+[binaryFile,path] = uigetfile(['E:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], 'Select a Binary File');
 if isa(binaryFile,'double')
     return;
 end
 
-[csvFile,csvPath] = uigetfile('full-tracking.csv','Tracking Data: Select a CSV File to Open');
+[csvFile,csvPath] = uigetfile(['E:\Rat' rat_no '\TrackingData\' date_str '\full-tracking.csv'],'Tracking Data: Select a CSV File to Open');
 if isa(csvFile,'double')
     return;
 end
 
-selparentpath = uigetdir('D:\Analysis','Select the Main Experiment Directory for Saving Pos.p Files');
+selparentpath = uigetdir(['E:\Rat' rat_no '\Analysis\' date_str '\'],'Select the Main Experiment Directory for Saving Pos.p Files');
 if isa(selparentpath,'double')
     return;
 end
 
+% Vyash's code
 Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
-Vyashpath = uigetdir(Vyashpath,'Select Vyash''s Code Directory');
-if isa(Vyashpath,'double')
-    return;
-end
+% Vyashpath = uigetdir(Vyashpath,'Select Vyash''s Code Directory');
+% if isa(Vyashpath,'double')
+%     return;
+% end
 
 answer=questdlg('Is the tracking time in the CSV already synchronized with Neuropixels time?', 'Warning!', 'Yes', 'No', 'No');
 
@@ -157,7 +160,7 @@ for l = 1:length(paramspath)
         answer=questdlg('The Pos.p file already exists! Do you want to overwrite it?', 'Warning!', 'Yes', 'No', 'Yes');
         if ~isequal(answer,'Yes')
             disp('Pos.p was not overwritten!')
-            return
+            continue;
         end
     end
     
@@ -196,4 +199,4 @@ for l = 1:length(paramspath)
 end
 %%
 cd(thisFilePath);
-fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);
+fprintf(['It totally took ' datestr(seconds(toc(start)),'MM:SS') ,' minutes.\n']);

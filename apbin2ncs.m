@@ -8,9 +8,9 @@
 %
 % *.ap.bin ==> *.ncs
 %
-%   See also APBIN2NCS, WINCLUST2MAT.
+%   See also APBIN2LFP, WINCLUST2MAT.
 %
-% Date 2022-04-29
+% Date 2022-11-27
 % Author Shahin G Lashkari
 %
 % Check:
@@ -22,8 +22,12 @@ numCh=32;
 answer = inputdlg('Enter a value for threshold (in microVolts)','Threshold', [1 45],{'80'});
 thresh = str2double(answer);
 fprintf('Threshold is %d uV.\n',thresh)
+answer = inputdlg({'Rat', 'Date'},'Enter the rat number and the date',[1 30],{'1068', '2022-12-20'});
+rat_no = answer{1};
+date_str = answer{2};
 %% Selecting the files and directories
-[binaryFile,path] = uigetfile('D:\Rat1055\NeuralData\*.ap.bin', 'Select One or More Binary Files','MultiSelect','on');
+[binaryFile,path] = uigetfile(['E:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], ...
+                                'Select One or More Binary Files (After CatGT)','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
 elseif isa(binaryFile,'char')
@@ -31,7 +35,8 @@ elseif isa(binaryFile,'char')
 end
 
 % Blocks of 32 recording sites
-[csvFile,csvPath] = uigetfile('D:\Rat1055\ChannelLog\*.csv','Channels of Interest: Select One or More CSV Files','MultiSelect','on');
+[csvFile,csvPath] = uigetfile(['E:\Rat', rat_no, '\ChannelLog\*.csv'], ...
+                                'Channels of Interest: Select One or More CSV Files','MultiSelect','on');
 if isa(csvFile,'double')
     return;
 elseif isa(csvFile,'char')
@@ -39,14 +44,16 @@ elseif isa(csvFile,'char')
 end
 
 % References
-[refFile,refPath] = uigetfile('D:\Rat1055\ChannelLog\*.csv','Channels of Reference: Select One or More CSV Files','MultiSelect','on');
-if isa(refFile,'double')
-    refFile = csvFile; % reference is actually the median of 32 channels
-elseif isa(refFile,'char')
-    refFile = cellstr(repmat(refFile,length(csvFile),1))'; % one reference for all blocks
-% elseif length(refFile)~= length(csvFile)
-%     error('Number of the reference files should match the number of channels of interest');
-end
+% refFile = csvFile; % reference is actually the median of 32 channels
+% refPath = csvPath;
+% [refFile,refPath] = uigetfile(['D:\Rat', rat_no, '\ChannelLog\*.csv'],'Channels of Reference: Select One or More CSV Files','MultiSelect','on');
+% if isa(refFile,'double')
+%     refFile = csvFile; % reference is actually the median of 32 channels
+% elseif isa(refFile,'char')
+%     refFile = cellstr(repmat(refFile,length(csvFile),1))'; % one reference for all blocks
+% % elseif length(refFile)~= length(csvFile)
+% %     error('Number of the reference files should match the number of channels of interest');
+% end
 
 % Vyash's code
 Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
@@ -55,7 +62,7 @@ if isa(Vyashpath,'double')
     return;
 end
 
-selparentpath = uigetdir('D:\Rat1055\Analysis','Select the main Directory for Saving CSC Files');
+selparentpath = uigetdir(['E:\Rat' rat_no '\Analysis\' date_str '\'],'Select the main Directory for Saving CSC Files');
 if isa(selparentpath,'double')
     return;
 end
@@ -97,7 +104,7 @@ end
 voltperbit = peak2peak/2^bits;
 % voltperbit = Vmax / Imax ./ gain;
 Nlx_ADBitVolts = 0.000000036621093749999997;
-Nlx_bits_per_NP_bits = voltperbit/Nlx_ADBitVolts;
+Nlx_bits_per_NP_bits = voltperbit/Nlx_ADBitVolts; % only selecting the first one from the vector
 
 
 
@@ -111,8 +118,8 @@ for l = 1:length(csvFile)
     
     range = readmatrix(fullfile(csvPath, csvFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
     range = reshape(range,1,[]); % making range a row vector
-    ref_range = readmatrix(fullfile(refPath, refFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
-    ref_range = reshape(ref_range,1,[]); % making range a row vector
+    % ref_range = readmatrix(fullfile(refPath, refFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
+    % ref_range = reshape(ref_range,1,[]); % making range a row vector
     selpath = fullfile(selparentpath, extractBefore(csvFile{l},'.csv'));
     
     if ~exist(selpath, 'dir')
@@ -156,12 +163,12 @@ for l = 1:length(csvFile)
             
             % Body
             for i=1:n-1
-                Samples = fread(binFile, [nChan, 512*chunksize], 'int16=>double')'; % (512xchunksize) x 385
-                Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset 
-                Samples(:,ref_range) = Samples(:,ref_range) - mean(Samples(:,ref_range),1); % remove DC offset from references
+                Samples = fread(binFile, [nChan, 512*chunksize], 'int16')'; % (512xchunksize) x 385
+                % Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset 
+                % Samples(:,ref_range) = Samples(:,ref_range) - mean(Samples(:,ref_range),1); % remove DC offset from references
                 % referencing: CAR if ref_range == range
-                Samples(:,range) = Samples(:,range) - median(Samples(:,ref_range),2);
-                Samples(:,range) = - Samples(:,range); % INVERTED
+                % Samples(:,range) = Samples(:,range) - median(Samples(:,ref_range),2);
+                Samples = - Samples; % INVERTED
                 
                 TimeStamp = (tStart{k} - tStart{1} + (i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt )*1e6; % in microseconds
                 Ttime = (i-1)*512*chunksize*dt:dt:(i*512*chunksize-1)*dt;
@@ -172,13 +179,13 @@ for l = 1:length(csvFile)
                 % Write Body of CSCs
                 for j=range
                     ChannelNumber=j-1;
-                    for l = 1:chunksize
-                        fwrite(cscFile{j}, TimeStamp(l), 'uint64');
+                    for m = 1:chunksize
+                        fwrite(cscFile{j}, TimeStamp(m), 'uint64');
                         fwrite(cscFile{j}, ChannelNumber, 'uint32');
                         fwrite(cscFile{j}, SampleFreq, 'uint32');
                         fwrite(cscFile{j}, NumValidSamples, 'uint32');
                         % 512 x N
-                        fwrite(cscFile{j}, Nlx_bits_per_NP_bits * Samples((l-1)*512+1:l*512,j), 'int16'); % Convert NP bits to NLX bits
+                        fwrite(cscFile{j}, Nlx_bits_per_NP_bits * Samples((m-1)*512+1:m*512,j), 'int16'); % Convert NP bits to NLX bits
                     end
                 end
                 if mod(i,5*round(n/100))==0 % display progress every 5 percent
@@ -193,17 +200,13 @@ for l = 1:length(csvFile)
         end
         fprintf(['It took ' datestr(seconds(toc(start1)),'HH:MM:SS') ,' to read and write files.\n\n']);
         
-        %% Bandpass filter: AP 600 - 6000 Hz, LFP 1 - 400 Hz
+        %% Bandpass filter: << AP 600 - 6000 Hz >>
         disp('Filtering started ...')
         start2= tic;
         for j=range
             [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
-            data_filtered = filterlfp(time, data, 600, 6000);
+            data_filtered = filterlfp(time, data, [600 6000]);
             write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            %if j==range(end)
-                data_filtered = filterlfp(time, data, 1, 400);
-                write_bin_csc([selpath filesep 'LFP' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
-            %end
             fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
         end
         fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter ', num2str(length(range)), ' csc files.\n\n']);
@@ -216,9 +219,6 @@ for l = 1:length(csvFile)
         for j=range
             i = i+1;
             movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpathB filesep 'CSC_B' num2str(i) '.ncs']);
-            %if j==range(end)
-                movefile([selpath filesep 'LFP' num2str(j-1) '.ncs'], [selpathB filesep 'LFP' num2str(i) '.ncs']);
-            %end
         end
         copyfile('VideoReport', [selpathB filesep 'VideoReport']);
         copyfile('VideoSampling', [selpathB filesep 'VideoSampling']);

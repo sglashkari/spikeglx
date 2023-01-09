@@ -4,36 +4,36 @@
 %
 %   See also LAPDETECTOR, ANALYZEDATA.
 %
-% Date 2022-01-16 (originally 2021-01-31)
-% Author Shahin G Lashkari
+%   Date 2023-01-01 (2021-01-31, 2022-01-16)
+%
+%   Author Shahin G Lashkari
 %
 clc; clear; close all;
+answer = inputdlg({'Rat', 'Date'},'Enter the rat number and the date',[1 30],{'1068', '2022-12-20'});
+rat_no = answer{1};
+date_str = answer{2};
 %% Selecting the appropriate files
-[binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select a Binary File');
+[binaryFile,path] = uigetfile(['E:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], 'Select a Binary File');
 if isa(binaryFile,'double')
     return;
 end
 
-[csvFile,csvPath] = uigetfile('Z:\Rat980\full-tracking.csv','CSV File: Select a Tracking Data to Open');
+[csvFile,csvPath] = uigetfile(['E:\Rat' rat_no '\TrackingData\' date_str '\full-tracking.csv'],'Tracking Data: Select a CSV File to Open');
 if isa(csvFile,'double')
     return;
 end
-
-% [sideTimeFile,sideTimePath] = uigetfile(fullfile(csvPath,'side_times.csv'),'Side Camera Times: Select a CSV File to Open');
-% if isa(sideTimeFile,'double')
-%     return;
-% end
 
 csvFile = fullfile(csvPath, 'full-tracking.csv');
 sideTimeFile = fullfile(csvPath, 'side_times.csv');
 %dlcFilename = fullfile(csvPath, 'dlc.csv');
 
-[forceFile,forcePath] = uigetfile('D:\NI-Data\force.mat','Select a mat File to Open');
+[forceFile,forcePath] = uigetfile(['E:\Rat' rat_no '\NI-Data\' date_str '.mat'],'Select a mat File to Open');
 if isa(forceFile,'double')
     return;
 end
+forceFile = fullfile(forcePath, forceFile);
 
-selparentpath = uigetdir('D:\Analysis','Select the Main Experiment Directory');
+selparentpath = uigetdir(['E:\Rat' rat_no '\Analysis\' date_str '\'],'Select the Main Experiment Directory');
 if isa(selparentpath,'double')
     return;
 end
@@ -42,20 +42,27 @@ end
 
 % finding start and finish time
 meta = ReadMeta(binaryFile, path);
-exp.start = datetime(strrep(meta.fileCreateTime,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York');
+exp.start = datetime(strrep(meta.fileCreateTime_original,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York');
 exp.finish = exp.start + str2double(meta.fileTimeSecs)/24/3600;
-exp.date = datetime(extractBefore(meta.fileCreateTime,'T'),'InputFormat','yyyy-MM-dd','TimeZone', 'America/New_York');
+exp.date = datetime(extractBefore(meta.fileCreateTime_original,'T'),'InputFormat','yyyy-MM-dd','TimeZone', 'America/New_York');
 
 % finding rat number and day number
 if exp.date < datetime(2021,12,31,'TimeZone','America/New_York') &&  exp.date > datetime(2021,11,10,'TimeZone','America/New_York')
-    exp.name = datestr(exp.date);
+    exp.name = char(exp.date);
     exp.rat_no = 980;
+    exp.day = day(exp.date);
+elseif exp.date < datetime(2022,12,31,'TimeZone','America/New_York') &&  exp.date > datetime(2022,12,7,'TimeZone','America/New_York')
+    exp.name = char(exp.date);
+    exp.rat_no = 1068;
     exp.day = day(exp.date);
 else
     error('specify the rat number!');
 end
 
 %% Neural Data
+if datetime(date_str,'InputFormat','yyyy-MM-dd','TimeZone','America/New_York') ~= exp.date
+    error('Neural date does not match the experiment date!');
+end
 disp('Reading clusters data ...')
 start = tic;
 listing = dir(fullfile(selparentpath,'**','cl-maze*.*'));
@@ -63,10 +70,16 @@ folders = {listing.folder}';
 names = {listing.name}';
 absolue_paths = fullfile(folders, names);
 N = length(listing); % number of clusters
-
-sh_no = str2double(extractBetween(folders,'Shank',filesep));
+shank_n_section = extractBetween(folders,'Shank',filesep);
+sh_no = zeros(N,1);
+% section = ones(N,1);
+for i=1:N
+    sh_no(i) = str2double(shank_n_section{i}(1));
+%     if length(shank_n_section{i}) ~= 1
+%         section(i) = str2double(shank_n_section{i}(3));
+%     end
+end
 region = char(convertCharsToStrings(extractBetween(folders,[selparentpath filesep],'-Shank'))); % like CA1, CA3, PPC
-maze_no = str2double(extractBetween(names,'maze','.'));
 cluster_no = str2double(extractAfter(names,'.'));
 cluster_no(isnan(cluster_no))=0;    % cluster 0
 
@@ -97,13 +110,14 @@ idx1(bad_frames)=0;
 % 2021-12 3 ft = 914 mm = 662 pixels = norm([1366 229.3]-[704 206.156]) >> each pixel ~ 1.4 mm
 
 if exp.rat_no >= 980
-    ppcm = norm([1366 229.3]-[704 206.156])/91.4; % pixels per cm
+    exp.ppcm = norm([1366 229.3]-[704 206.156])/91.4; % pixels per cm
 else
-    ppcm = norm([296 372]-[1136 348],2)/91.4; % pixels per cm
+    exp.ppcm = norm([296 372]-[1136 348],2)/91.4; % pixels per cm
 end
 
-pos.x = T.x(idx1) / ppcm; % cm
-pos.y = T.y(idx1) / ppcm; % cm
+pos.x = T.x(idx1) / exp.ppcm;   % cm
+pos.y = T.y(idx1) / exp.ppcm;   % cm
+exp.xmax = 2048 / exp.ppcm;     % cm 
 
 % time
 [~,~,t_pulse_np] = read_sync_apbin(binaryFile, path);
@@ -137,7 +151,7 @@ linkaxes([ax1 ax2],'x')
 
 %% Balazs's tracking (position and quaternion)
 close all;
-pos.p = [T.pos_1 T.pos_2 T.pos_3];
+pos.p = 100 * [T.pos_1 T.pos_2 T.pos_3]; % 100 for m to cm
 pos.q = [T.rot_4 T.rot_1 T.rot_2 T.rot_3];
 pos.success = T.success;
 pos.p = pos.p(idx1,:);
@@ -151,18 +165,22 @@ pos.pitch = rad2deg(pitch);
 pos.roll = rad2deg(roll);
 
 % correction for the miscalibration of the table
-coefficients = polyfit(pos.p(idx2,1),pos.p(idx2,3), 1);
-phi = atan(coefficients(1))*180/pi;
-R = [cosd(phi) 0 sind(phi); 0 1 0; -sind(phi) 0 cosd(phi)];
-figure
-subplot(2,1,1); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
-pos.p = (100*R*pos.p')';  % 100 for m to cm
-subplot(2,1,2); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+if exp.rat_no < 980
+    coefficients = polyfit(pos.p(idx2,1),pos.p(idx2,3), 1);
+    phi = atan(coefficients(1))*180/pi;
+    R = [cosd(phi) 0 sind(phi); 0 1 0; -sind(phi) 0 cosd(phi)];
+    figure(1); clf
+    subplot(2,1,1); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+    subplot(2,1,2); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+end
 
 % exclude the tracking data when the crown is occluded as NaN
-figure
+figure(2); clf
 plot3(pos.p(:,1),pos.p(:,2),pos.p(:,3),'.'); hold on
 if strcmp('21-Dec-2021',exp.name)
+    idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
+    idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
+elseif strcmp('20-Dec-2022',exp.name)
     idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
     idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
 else
@@ -171,22 +189,20 @@ else
 end
 idx4 = ~idx2|idx3|idx5; % need to be excluded
 
-figure(2)
 pos.p = interp1(pos.t(~idx4),pos.p(~idx4,:),pos.t);
 plot3(pos.p(idx4,1),pos.p(idx4,2),pos.p(idx4,3),'or'); hold on
 
 pos.p(idx4,1:3)=nan;
 figure(2); plot3(pos.p(:,1),pos.p(:,2),pos.p(:,3),'.g'); hold on
-
+axis equal 
 %% DAQ data (load cell, side view camera pulses)
-try % for temporary fix before updating force.mat files
-    load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_cam_top','t_pulse_cam_side','f1_filt','f2_filt','f3_filt');
-    t_pulse_cam_top = reshape(t_pulse_cam_top,[],1);
-    t_pulse_cam_side = reshape(t_pulse_cam_side,[],1);
-catch
-    load(fullfile(forcePath,'force.mat'),'t','f1','f2','f3','t_pulse_daq','f1_filt','f2_filt','f3_filt');
-    t_pulse_cam_top = t_pulse_daq;
+load(forceFile,'t','f1','f2','f3','t_pulse_cam_top','t_pulse_cam_side','f1_filt','f2_filt','f3_filt','StartTimeStamp','StopTimeStamp');
+if datetime(StartTimeStamp, 'TimeZone', 'America/New_York') < exp.start || ...
+        datetime(StopTimeStamp, 'TimeZone', 'America/New_York') > exp.finish
+    error('DAQ date does not match the experiment date!');
 end
+t_pulse_cam_top = reshape(t_pulse_cam_top,[],1);
+t_pulse_cam_side = reshape(t_pulse_cam_side,[],1);
 % time
 if length(t_pulse_np)==length(t_pulse_cam_top)
     fprintf('Number of pulses in Neuropixels and NI DAQ were the same: %d.\n',length(t_pulse_np));
@@ -204,12 +220,9 @@ daq.filt.loadcell = [f1_filt;f2_filt;f3_filt];
 %% Camera (side view)
 T_side = readmatrix(sideTimeFile);
 t_cam_side = round(T_side(:,5),3); % seconds (with milliseconds precision)
-try
-    t_side_cam_in_daq = sync_em(t_pulse_cam_side,t_cam_side);
-    pos.side.t = interp1(t, daq.t, t_side_cam_in_daq,'linear','extrap'); % side view camera time in neuropixel time
-    pos.side.frame = 0:length(pos.side.t)-1;
-catch
-end
+t_side_cam_in_daq = sync_em(t_pulse_cam_side,t_cam_side);
+pos.side.t = interp1(t, daq.t, t_side_cam_in_daq,'linear','extrap'); % side view camera time in neuropixel time
+pos.side.frame = 0:length(pos.side.t)-1;
 
 %% Deep lab cut (side view)
 % try
@@ -226,11 +239,11 @@ end
 %% spike data
 cluster(N).name ='';
 for idx2 = 1:N
-    cluster(idx2).name = [region(idx2,:) '_shank' num2str(sh_no(idx2)) '_cluster' num2str(cluster_no(idx2))];
+    cluster(idx2).name = [region(idx2,:) '_shank' shank_n_section{idx2} '_cluster' num2str(cluster_no(idx2))];
     cluster(idx2).region = region(idx2,:);
-    cluster(idx2).sh = sh_no(idx2);
-    cluster(idx2).m = maze_no(idx2);
-    cluster(idx2).cl = cluster_no(idx2);
+%     cluster(idx2).shank = sh_no(idx2);
+    cluster(idx2).shank_n_section = shank_n_section(idx2);
+%     cluster(idx2).cl = cluster_no(idx2);
     cluster(idx2).no = idx2;
     % ineterpolation for time (excluding times that the rat is occluded)
     cluster(idx2).t = (A{idx2}.data(:,18))*1e-6; % sec
@@ -245,7 +258,7 @@ for idx2 = 1:N
 end
 
 %% Saving
-mat_filename = fullfile(selparentpath,'data.mat');
-save(mat_filename,'pos','cluster','exp','ppcm', 'daq');
+mat_filename = fullfile(selparentpath,'raw_data.mat');
+save(mat_filename,'pos','cluster','exp','daq');
 disp(['File ' mat_filename ' has been created!'])
 fprintf(['It totally took ' datestr(seconds(toc(start)),'HH:MM:SS') ,'.\n']);

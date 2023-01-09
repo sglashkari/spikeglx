@@ -55,7 +55,7 @@ switch patternType
         
     case 3
         % customized
-        [csvFile,csvPath] = uigetfile('D:\Rat1055\ChannelLog\IMRO\*.csv','Channel maps: Select a CSV File to Open');
+        [csvFile,csvPath] = uigetfile('D:\Rat1068\ChannelLog\IMRO\*.csv','Channel maps: Select a CSV File to Open');
         if isa(csvFile,'double')
             return;
         end

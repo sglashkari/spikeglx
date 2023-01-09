@@ -28,9 +28,9 @@ t = (1:length(load_cell_1))*5e-4; % in seconds (2kHz)
 StartTimeStamp = StopTimeStamp - seconds(t(end)-t(1));
 toc
 %%
-f1 = load_cell_1/2 * 9.81; % Newton
+f1 = (load_cell_1-median(load_cell_1))/2 * 9.81; % Newton
 f2 = (load_cell_2-median(load_cell_2))/2 * 9.81; % Newton
-f3 = load_cell_3/2 * 9.81; % Newton
+f3 = (load_cell_3-median(load_cell_3))/2 * 9.81; % Newton
 
 %%
 figure(10); clf

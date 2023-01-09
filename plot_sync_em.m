@@ -1,31 +1,30 @@
 % Test and plot sync_em
-% SGL 2022-02-05
-clear; 
-clc; close all
+%   Date 2023-01-06 (originally 2022-02-05)
+%   Author Shahin G Lashkari
+%
+clc; clear; close all;
+answer = inputdlg({'Rat', 'Date'},'Enter the rat number and the date',[1 30],{'1068', '2022-12-20'});
+rat_no = answer{1};
+date_str = answer{2};
 %% Selecting the appropriate files
-[binaryFile,path] = uigetfile('D:\NeuralData\*.ap.bin', 'Select a Binary File');
+[binaryFile,path] = uigetfile(['E:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], 'Select a Binary File');
 if isa(binaryFile,'double')
     return;
 end
 
-[csvFile,csvPath] = uigetfile('full-tracking.csv','Tracking Data: Select a CSV File to Open');
+[csvFile,csvPath] = uigetfile(['E:\Rat' rat_no '\TrackingData\' date_str '\full-tracking.csv'],'Tracking Data: Select a CSV File to Open');
 if isa(csvFile,'double')
     return;
 end
 
-[forceFile,forcePath] = uigetfile('D:\NI-Data\force.mat','Select a force.mat File to Open');
+[forceFile,forcePath] = uigetfile(['E:\Rat' rat_no '\NI-Data\' date_str '.mat'],'Select a mat File to Open');
 if isa(forceFile,'double')
     return;
 end
 
-[sideTimeFile,sideTimePath] = uigetfile(fullfile(csvPath,'side_times.csv'),'Side Camera Times: Select a CSV File to Open');
-if isa(sideTimeFile,'double')
-    return;
-end
-
 csvFile = fullfile(csvPath, 'full-tracking.csv');
-sideTimeFile = fullfile(sideTimePath, 'side_times.csv');
-forceFile = fullfile(forcePath,'force.mat');
+sideTimeFile = fullfile(csvPath, 'side_times.csv');
+forceFile = fullfile(forcePath, forceFile);
 %% Neuropixels
 [time,data,t_pulse_np] = read_sync_apbin(binaryFile, path);
 
@@ -50,13 +49,14 @@ fprintf('Camera (top): length of recording %4.12g seconds.\n\n',t_cam(end)-t_cam
 
 %% DAQ (load cells)
 try
-    load(forceFile,'t','t_pulse_daq','t_pulse_cam_top','t_pulse_cam_side'); % t_pulse_daq needs to be removed in future
+    load(forceFile,'t','t_pulse_cam_top','t_pulse_cam_side');
 catch
-    load(forceFile,'t','t_pulse_daq'); % t_pulse_daq needs to be removed in future
+    load(forceFile,'t','t_pulse_daq'); % old tdms files
+    t_pulse_cam_top = t_pulse_daq;
 end
-fprintf('DAQ: On average frames were taken every %.6g milliseconds. \n', 1000*mean(diff(t_pulse_daq)));
-fprintf('DAQ: Number of frames taken were %d.\n',length(t_pulse_daq))
-fprintf('DAQ: length of recording %4.12g seconds.\n\n',t_pulse_daq(end)-t_pulse_daq(1));
+fprintf('DAQ: On average frames were taken every %.6g milliseconds. \n', 1000*mean(diff(t_pulse_cam_top)));
+fprintf('DAQ: Number of frames taken were %d.\n',length(t_pulse_cam_top))
+fprintf('DAQ: length of recording %4.12g seconds.\n\n',t_pulse_cam_top(end)-t_pulse_cam_top(1));
 
 %% Camera (side view)
 T_side = readmatrix(sideTimeFile);
@@ -147,17 +147,18 @@ figure(6); clf;
 plot(t_pulse_np,zeros(size(t_pulse_np)),'.b'); hold on
 plot(t_cam_in_np,zeros(size(t_cam_in_np)),'or');
 plot(t_fall_np,zeros(size(t_fall_np)),'pk');
-
+title('interpolation (Neuropixel & top cam)')
 fprintf('Camera (corrected): length of recording %4.12g seconds.\n\n',t_cam_in_np(end)-t_cam_in_np(1));
 
 %% interpolation (DAQ & side cam)
 t_side_cam_in_daq = sync_em(t_pulse_cam_side,t_cam_side);
-t_daq_in_np = interp1(t_pulse_cam_top,t_pulse_np,t,'linear','extrap'); % in seconds
-t_side_cam_in_np = interp1(t, t_daq_in_np, t_side_cam_in_daq,'linear','extrap');
+% t_daq_in_np = interp1(t_pulse_cam_top,t_pulse_np,t,'linear','extrap'); % in seconds
+% t_side_cam_in_np = interp1(t, t_daq_in_np, t_side_cam_in_daq,'linear','extrap');
+t_side_cam_in_np = interp1(t_pulse_cam_top,t_pulse_np, t_side_cam_in_daq,'linear','extrap');
 
 figure(16); clf;
 plot(t_pulse_cam_side,zeros(size(t_pulse_cam_side)),'.b'); hold on
 plot(t_side_cam_in_daq,zeros(size(t_side_cam_in_daq)),'or');
-%plot(t_fall_np,zeros(size(t_fall_np)),'pk');
+plot(t_fall_np,zeros(size(t_fall_np)),'pk');
 
 fprintf('Side Camera (corrected): length of recording %4.12g seconds.\n\n',t_side_cam_in_daq(end)-t_side_cam_in_daq(1));

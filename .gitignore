@@ -46,7 +46,8 @@ octave-workspace
 # Pos.p files
 [Pp]os.p*
 
-# For now
+# TEMP FILES
 balazs.m
 controlVelmex.m
 test.m
+tmp*
