@@ -51,3 +51,7 @@ balazs.m
 controlVelmex.m
 test.m
 tmp*
+
+# Force analysis (for Brian and Murtaza)
+plot_sync_side.m
+force_from_video_time.m
