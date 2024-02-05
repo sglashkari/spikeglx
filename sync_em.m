@@ -1,6 +1,14 @@
 function t_cam_in_np = sync_em(t_pulse_np,t_pulse_cam)
-% This program synchronizes camera time with the Neuropixels time.
-% SGL 2022-02-05
+%
+% This program synchronizes two clocks:
+%   e.g. the Neuropixels clock and the camera clock.
+%
+%   See also PLOT_SYNC_EM, PLOT_SYNC_SIDE.
+%
+%   Date 2022-02-05
+%
+%   Author Shahin G Lashkari
+%
 
 %% Camera: change detection for variable frame rate
 singal_cam = [0; diff(t_pulse_cam)];
@@ -21,10 +29,10 @@ t_fall_np = t_pulse_np(index);
 %% interpolation
 if length(t_fall_np) == length(t_fall_cam)
     t_cam_in_np = interp1(t_fall_cam, t_fall_np, t_pulse_cam,'linear','extrap');
-    fprintf('Sync was successful.\n');
+    fprintf('Sync was successful!\n\n');
 else
     t_cam_in_np = interp1(t_fall_cam, t_fall_np(1:length(t_fall_cam)), t_pulse_cam,'linear','extrap');
-    warning('clocks may not be synced!!')
+    warning('Different number of pulses; Clocks may not be synced!')
 end
 
 end

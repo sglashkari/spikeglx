@@ -1,5 +1,10 @@
-% Test and plot sync_em
+%
+%   Test and plot sync_em
+%
+%   See also SYNC_EM, PLOT_SYNC_SIDE.
+%
 %   Date 2023-01-06 (originally 2022-02-05)
+%
 %   Author Shahin G Lashkari
 %
 clc; clear; close all;
@@ -17,7 +22,7 @@ if isa(csvFile,'double')
     return;
 end
 
-[forceFile,forcePath] = uigetfile(['E:\Rat' rat_no '\NI-Data\' date_str '.mat'],'Select a mat File to Open');
+[forceFile,forcePath] = uigetfile(['E:\Rat' rat_no '\NI-Data\' date_str '.mat'],'Force File: Select a mat File to Open');
 if isa(forceFile,'double')
     return;
 end
@@ -111,6 +116,9 @@ legend('daq','sdie camera')
 
 figure(5); clf;
 % edge detection
+if (t_pulse_np(2)-t_pulse_np(1)) > 2
+    t_pulse_np(1) = [];
+end
 singal_np = [0; diff(t_pulse_np)];
 singal_np = movmedian(singal_np,10);
 locations_np = double(singal_np>0.032);
@@ -121,7 +129,7 @@ t_fall_np = t_pulse_np(index);
 plot(t_fall_np,zeros(size(t_fall_np)),'o')
 
 plot(t_pulse_np,locations_np)
-length(t_fall_np)
+% length(t_fall_np)
 
 %% Camera: plot changes of diff
 
@@ -138,7 +146,7 @@ t_fall_cam = t_pulse_cam(index);
 plot(t_fall_cam,zeros(size(t_fall_cam)),'o')
 
 plot(t_pulse_cam,locations_cam)
-length(t_fall_cam)
+% length(t_fall_cam)
 
 %% interpolation (NP & top cam)
 t_cam_in_np = sync_em(t_pulse_np,t_pulse_cam);

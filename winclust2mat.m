@@ -51,9 +51,17 @@ if exp.date < datetime(2021,12,31,'TimeZone','America/New_York') &&  exp.date > 
     exp.name = char(exp.date);
     exp.rat_no = 980;
     exp.day = day(exp.date);
+elseif exp.date < datetime(2022,11,31,'TimeZone','America/New_York') &&  exp.date > datetime(2022,11,1,'TimeZone','America/New_York')
+    exp.name = char(exp.date);
+    exp.rat_no = 1055;
+    exp.day = day(exp.date);
 elseif exp.date < datetime(2022,12,31,'TimeZone','America/New_York') &&  exp.date > datetime(2022,12,7,'TimeZone','America/New_York')
     exp.name = char(exp.date);
     exp.rat_no = 1068;
+    exp.day = day(exp.date);
+elseif exp.date < datetime(2023,4,15,'TimeZone','America/New_York') &&  exp.date > datetime(2022,3,15,'TimeZone','America/New_York')
+    exp.name = char(exp.date);
+    exp.rat_no = 1079;
     exp.day = day(exp.date);
 else
     error('specify the rat number!');
@@ -119,6 +127,15 @@ pos.x = T.x(idx1) / exp.ppcm;   % cm
 pos.y = T.y(idx1) / exp.ppcm;   % cm
 exp.xmax = 2048 / exp.ppcm;     % cm 
 
+% the right edge of the gap in pixels
+if exp.rat_no == 980
+    exp.gap_edge_in_px = 888.651; 
+elseif exp.rat_no == 1055 || exp.rat_no == 1068 || exp.rat_no == 1079
+    exp.gap_edge_in_px = 837;
+else
+    error('identify the gap edge!')
+end
+
 % time
 [~,~,t_pulse_np] = read_sync_apbin(binaryFile, path);
 if length(t_pulse_np)==height(T)
@@ -152,41 +169,36 @@ linkaxes([ax1 ax2],'x')
 %% Balazs's tracking (position and quaternion)
 close all;
 pos.p = 100 * [T.pos_1 T.pos_2 T.pos_3]; % 100 for m to cm
-pos.q = [T.rot_4 T.rot_1 T.rot_2 T.rot_3];
+pos.q = [T.rot_4 T.rot_1 T.rot_2 T.rot_3]; % [w x y z] in MATLAB, Balazs uses [x y z w]
 pos.success = T.success;
 pos.p = pos.p(idx1,:);
 pos.q = pos.q(idx1,:);
 pos.success = pos.success(idx1);
 idx2 = pos.success==1; % idx2: index for the crown tracker
 
-[yaw, pitch, roll] = quat2angle(pos.q); % idx1: index for single-marker tracker
-pos.yaw = rad2deg(yaw);
-pos.pitch = rad2deg(pitch);
-pos.roll = rad2deg(roll);
-
 % correction for the miscalibration of the table
-if exp.rat_no < 980
+if exp.rat_no <= 980
     coefficients = polyfit(pos.p(idx2,1),pos.p(idx2,3), 1);
     phi = atan(coefficients(1))*180/pi;
     R = [cosd(phi) 0 sind(phi); 0 1 0; -sind(phi) 0 cosd(phi)];
     figure(1); clf
     subplot(2,1,1); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
+    pos.p = pos.p * R';
     subplot(2,1,2); plot(pos.p(idx2,1),pos.p(idx2,3),'.', 'MarkerSize',0.2);
 end
+% correction for different coordinate frames of side and top view cameras
+pos.p(:,1) = pos.p(:,1) + exp.gap_edge_in_px/exp.ppcm; 
+[pos.roll, pos.pitch, pos.yaw] = quat2rpy(pos.q);
+% euler_angles = quat2eul(pos.q, 'ZYX'); % idx1: index for single-marker tracker
+% pos.roll = rad2deg(euler_angles(:,3));
+% pos.pitch = rad2deg(euler_angles(:,2));
+% pos.yaw = rad2deg(euler_angles(:,1));
 
 % exclude the tracking data when the crown is occluded as NaN
 figure(2); clf
 plot3(pos.p(:,1),pos.p(:,2),pos.p(:,3),'.'); hold on
-if strcmp('21-Dec-2021',exp.name)
-    idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
-    idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
-elseif strcmp('20-Dec-2022',exp.name)
-    idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
-    idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
-else
-    idx3 = zeros(size(idx2));
-    idx5 = idx3;
-end
+idx3 = pos.p(:,2)< -22.5 | pos.p(:,2) > 25 | pos.p(:,3)> 24 | pos.p(:,3)< -35;
+idx5 = [0; abs(diff(pos.p(:,1))) > 10 | abs(diff(pos.p(:,2))) > 5];
 idx4 = ~idx2|idx3|idx5; % need to be excluded
 
 pos.p = interp1(pos.t(~idx4),pos.p(~idx4,:),pos.t);
@@ -245,6 +257,7 @@ for idx2 = 1:N
     cluster(idx2).shank_n_section = shank_n_section(idx2);
 %     cluster(idx2).cl = cluster_no(idx2);
     cluster(idx2).no = idx2;
+    cluster(idx2).size = numel(A{idx2}.data(:,18));
     % ineterpolation for time (excluding times that the rat is occluded)
     cluster(idx2).t = (A{idx2}.data(:,18))*1e-6; % sec
     % interpolation for position
@@ -255,6 +268,7 @@ for idx2 = 1:N
     cluster(idx2).vx = interp1(pos.t, pos.vx, cluster(idx2).t);
     cluster(idx2).vy = interp1(pos.t, pos.vy, cluster(idx2).t);
     cluster(idx2).s = vecnorm([cluster(idx2).vx cluster(idx2).vy]')';
+    cluster(idx2).size = numel(cluster(idx2).t);
 end
 
 %% Saving

@@ -18,7 +18,7 @@
 %
 clc; clear
 close all
-numCh=32;
+% numCh=32;
 answer = inputdlg('Enter a value for threshold (in microVolts)','Threshold', [1 45],{'80'});
 thresh = str2double(answer);
 fprintf('Threshold is %d uV.\n',thresh)
@@ -26,7 +26,7 @@ answer = inputdlg({'Rat', 'Date'},'Enter the rat number and the date',[1 30],{'1
 rat_no = answer{1};
 date_str = answer{2};
 %% Selecting the files and directories
-[binaryFile,path] = uigetfile(['E:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], ...
+[binaryFile,path] = uigetfile(['D:\Rat' rat_no '\CatGT\' date_str '\catgt_' date_str '_g0\*.ap.bin'], ...
                                 'Select One or More Binary Files (After CatGT)','MultiSelect','on');
 if isa(binaryFile,'double')
     return;
@@ -35,25 +35,13 @@ elseif isa(binaryFile,'char')
 end
 
 % Blocks of 32 recording sites
-[csvFile,csvPath] = uigetfile(['E:\Rat', rat_no, '\ChannelLog\*.csv'], ...
+[csvFile,csvPath] = uigetfile(['D:\Rat', rat_no, '\ChannelLog\*.csv'], ...
                                 'Channels of Interest: Select One or More CSV Files','MultiSelect','on');
 if isa(csvFile,'double')
     return;
 elseif isa(csvFile,'char')
     csvFile = {csvFile};
 end
-
-% References
-% refFile = csvFile; % reference is actually the median of 32 channels
-% refPath = csvPath;
-% [refFile,refPath] = uigetfile(['D:\Rat', rat_no, '\ChannelLog\*.csv'],'Channels of Reference: Select One or More CSV Files','MultiSelect','on');
-% if isa(refFile,'double')
-%     refFile = csvFile; % reference is actually the median of 32 channels
-% elseif isa(refFile,'char')
-%     refFile = cellstr(repmat(refFile,length(csvFile),1))'; % one reference for all blocks
-% % elseif length(refFile)~= length(csvFile)
-% %     error('Number of the reference files should match the number of channels of interest');
-% end
 
 % Vyash's code
 Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
@@ -62,7 +50,7 @@ if isa(Vyashpath,'double')
     return;
 end
 
-selparentpath = uigetdir(['E:\Rat' rat_no '\Analysis\' date_str '\'],'Select the main Directory for Saving CSC Files');
+selparentpath = uigetdir(['D:\Rat' rat_no '\Analysis\' date_str '\'],'Select the main Directory for Saving CSC Files');
 if isa(selparentpath,'double')
     return;
 end
@@ -106,8 +94,6 @@ voltperbit = peak2peak/2^bits;
 Nlx_ADBitVolts = 0.000000036621093749999997;
 Nlx_bits_per_NP_bits = voltperbit/Nlx_ADBitVolts; % only selecting the first one from the vector
 
-
-
 thisFilePath = pwd;
 
 %%
@@ -118,8 +104,7 @@ for l = 1:length(csvFile)
     
     range = readmatrix(fullfile(csvPath, csvFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
     range = reshape(range,1,[]); % making range a row vector
-    % ref_range = readmatrix(fullfile(refPath, refFile{l})) + 1; % selection range in matlab is 1..385, while for the range for AP is 0..384
-    % ref_range = reshape(ref_range,1,[]); % making range a row vector
+    numCh = numel(range);
     selpath = fullfile(selparentpath, extractBefore(csvFile{l},'.csv'));
     
     if ~exist(selpath, 'dir')
@@ -137,8 +122,6 @@ for l = 1:length(csvFile)
             n = floor(nSamp/512/chunksize);
             dt = 1/str2double(meta.imSampRate); % in seconds
             tStart{k} = posixtime(datetime(strrep(meta.fileCreateTime,'T',' '),'InputFormat','yyyy-MM-dd HH:mm:ss','TimeZone', 'America/New_York'));
-            
-            %time = 0:dt:meta.fileTimeSecs;
             
             % opening
             binFile = fopen(fullfile(path, binaryFile{k}), 'rb');
@@ -164,13 +147,9 @@ for l = 1:length(csvFile)
             % Body
             for i=1:n-1
                 Samples = fread(binFile, [nChan, 512*chunksize], 'int16')'; % (512xchunksize) x 385
-                % Samples(:,range) = Samples(:,range) - mean(Samples(:,range),1); % remove DC offset 
-                % Samples(:,ref_range) = Samples(:,ref_range) - mean(Samples(:,ref_range),1); % remove DC offset from references
-                % referencing: CAR if ref_range == range
-                % Samples(:,range) = Samples(:,range) - median(Samples(:,ref_range),2);
                 Samples = - Samples; % INVERTED
                 
-                TimeStamp = (tStart{k} - tStart{1} + (i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt )*1e6; % in microseconds
+                TimeStamp = (tStart{k} - tStart{1} + ((i-1)*512*chunksize*dt:512*dt:(i*512*chunksize-1)*dt) )*1e6; % in microseconds
                 Ttime = (i-1)*512*chunksize*dt:dt:(i*512*chunksize-1)*dt;
                
                 SampleFreq=str2double(meta.imSampRate);
@@ -205,7 +184,8 @@ for l = 1:length(csvFile)
         start2= tic;
         for j=range
             [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
-            data_filtered = filterlfp(time, data, [600 6000]);
+            movefile([selpath filesep 'CSC' num2str(j-1) '.ncs'], [selpath filesep 'Unfiltered_CSC' num2str(j-1) '.ncs']);
+            data_filtered = filterlfp(time, data, 'ap');
             write_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);
             fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
         end

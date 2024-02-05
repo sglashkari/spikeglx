@@ -176,7 +176,7 @@ title('Total passage count')
 %% psychometric function (leftward vs rightward)
 figure(6); clf; hold on
 den = hist_rj+hist_rd;
-idx = den >= 6;
+idx = den >= 5;
 plot(l_r(idx),hist_rj(idx)./(den(idx)+eps),'-o')
 title('psychometric function (leftward vs rightward)')
 try
@@ -184,14 +184,14 @@ try
 catch
 end
 den = hist_lj+hist_ld;
-idx = den >= 6;
+idx = den >= 5;
 plot(l_l(idx),hist_lj(idx)./(den(idx)+eps),'-o')
 try
     xlim([min(gap_length)-0.375 max(gap_length)+0.375])
 catch
 end
 den = hist_j+hist_d;
-idx = den >= 6;
+idx = den >= 5;
 plot(l_rl(idx),hist_j(idx)./(den(idx)+eps),'-o')
 try
     xlim([min(gap_length)-0.375 max(gap_length)+0.375])
@@ -269,6 +269,11 @@ xlabel('Gap length (inch)')
 title('leftward (increase vs decrease)')
 ylim([0 1])
 xlim([min(gap_length)-0.375 max(gap_length)+0.375])
+
+if nnz(left_ditch+right_ditch) < 5
+    close(6);
+    close(7);
+end
 
 % den = hist_rj+hist_rd;
 % idx = den >= 6;

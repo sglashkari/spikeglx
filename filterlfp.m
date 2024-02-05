@@ -20,7 +20,7 @@ if nargin < 2
     [t, lfp] = read_bin_csc;
 end
 
-Ts = mean(diff(t));
+Ts = median(diff(t));
 SamplingFrequency = round(1/Ts);
 
 if nargin < 3
@@ -38,13 +38,13 @@ if isstring(w) || ischar(w)
         case 'delta'
             w = [0.5 3.5];
         case 'theta'
-            w = [6 9];
+            w = [6 12];
         case 'beta'
             w = [10 20];
         case 'gamma'
             w = [30 50];
         otherwise
-            w = [6 9];
+            w = [6 12];
             warning('Type is not recognized, but theta is chosen!')
     end
 end

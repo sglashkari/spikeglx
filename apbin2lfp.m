@@ -1,12 +1,9 @@
-%% apbin2ncs reads a Spike GLX AP bin files to Neuralynx CSC files
-% It also remvoes the DC offset, does common average referencing (CAR) and
-% bandpass filtering (1-400 Hz for LFP)
-% At the end, it calls Vyash's code to extract the params and waveform
-% files.
+%% apbin2ncs reads a Spike GLX AP bin files to create Neuralynx CSC files
+% It also uses bandpass filtering (1-400 Hz for LFP)
 %
 % *.ap.bin ==> *.ncs
 %
-%   See also APBIN2NCS, WINCLUST2MAT.
+%   See also PLOTCSC, APBIN2NCS, WINCLUST2MAT.
 %
 % Date 2023-01-02 (originally 2022-11-27)
 %
@@ -31,10 +28,7 @@ elseif isa(binaryFile,'char')
 end
 
 % Blocks of 32 recording sites
-[csvFile,csvPath] = uigetfile(['E:\Rat', rat_no, '\ChannelLog\LFP.csv'], 'Channels of Interest: Select a CSV Files for LFP');
-if isa(csvFile,'double')
-    return;
-end
+[csvFile,csvPath] = uigetfile(['E:\Rat', rat_no, '\ChannelLog\LFP.csv'], 'Channels of Interest: Select a CSV Files for LFP (cancel to select all channels)');
 
 % Vyash's code
 Vyashpath = 'C:\Users\neuropixels\Neuropixels\NPtoWinclust_Pipeline\makeParms';
@@ -183,7 +177,7 @@ if ~exist(selpath, 'dir')
         [time,data,header,ChannelNumber,SampleFreq,NumValidSamples] = read_bin_csc([selpath filesep 'CSC' num2str(j-1) '.ncs']);
         data_filtered = filterlfp(time, data, 'lfp');
         write_bin_csc([selpath filesep 'LFP' num2str(j-1) '.ncs'], time,data_filtered,header,ChannelNumber,SampleFreq,NumValidSamples);        
-        % delete([selpath filesep 'CSC' num2str(j-1) '.ncs'])
+        delete([selpath filesep 'CSC' num2str(j-1) '.ncs'])
         fprintf('\rFiltering: %.0f seconds, %.0f%% done.',toc(start2), find(range==j)/length(range)*100)
     end
     fprintf(['\nIt took ' datestr(seconds(toc(start2)),'HH:MM:SS') ,' to filter the CSC file.\n\n']);
